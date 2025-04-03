@@ -1,4 +1,4 @@
-name: authsMS
+name: xxms
 
 pool:
   vmImage: ubuntu-latest
