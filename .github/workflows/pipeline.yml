@@ -1,0 +1,19 @@
+name: Invoke Global Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  trigger-global-pipeline:
+    uses: Labs/global_pipeline/.github/workflows/language-version-detection.yml@testing
+    secrets:
+      USERNAME: ${{ secrets.USERNAME }}
+      PASSWORD: ${{ secrets.PASSWORD }}
+    with:
+      repository_name: ${{ github.repository }}

@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: library-auth
+  labels:
+    app: library-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: library-auth
+  template:
+    metadata:
+      labels:
+        app: library-auth
+    spec:
+      containers:
+      - name: library-auth-container
+        image: senseydevacr.azurecr.io/authsms:1.0.10
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: library-auth-configmap
+        - secretRef:
+            name: library-auth-secret
+        resources:
+          requests:
+            memory: "750Mi"
+            cpu: "250m"
+          limits:
+            memory: "750Mi"
+            cpu: "500m"

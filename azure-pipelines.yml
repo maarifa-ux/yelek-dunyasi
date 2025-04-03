@@ -1,0 +1,33 @@
+name: authsMS
+
+pool:
+  vmImage: ubuntu-latest
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+    - kubernetes/*
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - kubernetes/*
+
+resources:
+  repositories:
+    - repository: pipelineTemplates
+      type: git
+      name: SenseyShared/global_pipeline
+      ref: main
+
+extends:
+  template: pipelines/aks_pipeline.yml@pipelineTemplates
+  parameters:
+    major: 1
+    minor: 0

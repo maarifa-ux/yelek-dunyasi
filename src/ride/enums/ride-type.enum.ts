@@ -1,0 +1,10 @@
+export enum RideType {
+  ROAD = 'ROAD',
+  MOUNTAIN = 'MOUNTAIN',
+  GRAVEL = 'GRAVEL',
+  URBAN = 'URBAN',
+  TOURING = 'TOURING',
+  TRAINING = 'TRAINING',
+  RACE = 'RACE',
+  OTHER = 'OTHER',
+}

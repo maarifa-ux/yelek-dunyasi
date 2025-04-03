@@ -1,0 +1,16 @@
+export enum RoleEnum {
+  'admin' = 1,
+  'user' = 2,
+  'guest' = 3,
+  'user_view' = 4,
+  'user_edit' = 5,
+  'manager_view' = 6,
+  'manager_edit' = 7,
+  'manager_application_spesific' = 8,
+  'admin_view' = 9,
+  'admin_edit' = 10,
+  'admin_delete' = 11,
+  'admin_add' = 12,
+  'assign_role' = 13,
+  'deassing_role' = 14,
+}

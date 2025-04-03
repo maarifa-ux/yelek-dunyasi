@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-auth-configmap
+  namespace: dev-sensey-library-auth
+data:
+  NODE_ENV: "development"
+  APP_PORT: "8080"
+  APP_NAME: "NestJS API"
+  API_PREFIX: "api"
+  APP_FALLBACK_LANGUAGE: "en"
+  APP_HEADER_LANGUAGE: "x-custom-lang"
+  FRONTEND_DOMAIN: "library-webui-service.dev-sensey-library-webui.svc.cluster.local"
+  BACKEND_DOMAIN: "library-gateway-service.dev-sensey-application-gateway.svc.cluster.local"
+  DATABASE_TYPE: "postgres"
+  DATABASE_HOST: "dev-sensey-postgresql.postgres.database.azure.com"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "authDB"
+  DATABASE_SYNCHRONIZE: "false"
+  DATABASE_MAX_CONNECTIONS: "100"
+  DATABASE_SSL_ENABLED: "false"
+  DATABASE_REJECT_UNAUTHORIZED: "false"
+  FILE_DRIVER: "local"
+  MAIL_HOST: ""
+  MAIL_PORT: ""
+  MAIL_IGNORE_TLS: ""
+  MAIL_SECURE: ""
+  MAIL_REQUIRE_TLS: ""
+  MAIL_DEFAULT_EMAIL: "dcanerler@sensey.io"
+  MAIL_DEFAULT_NAME: ""
+  MAIL_CLIENT_PORT: ""
+  WORKER_HOST: ""
+
