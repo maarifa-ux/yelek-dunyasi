@@ -23,7 +23,7 @@ resources:
   repositories:
     - repository: pipelineTemplates
       type: git
-      name: SenseyShared/global_pipeline
+      name: xxx/global_pipeline
       ref: main
 
 extends:
