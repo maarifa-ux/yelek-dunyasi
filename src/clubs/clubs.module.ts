@@ -8,6 +8,7 @@ import { ClubCity } from './entities/club-city.entity';
 import { Announcement } from './entities/announcement.entity';
 import { ClubNote } from './entities/club-note.entity';
 import { ClubInvitation } from './entities/club-invitation.entity';
+import { ClubRoleSetting } from './entities/club-role-setting.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 
@@ -20,6 +21,7 @@ import { UsersModule } from '../users/users.module';
       Announcement,
       ClubNote,
       ClubInvitation,
+      ClubRoleSetting,
     ]),
     NotificationsModule,
     UsersModule,

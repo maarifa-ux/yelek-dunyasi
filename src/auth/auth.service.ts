@@ -100,11 +100,14 @@ export class AuthService {
       sessionId: session.id,
     });
 
+    const isProfileCompleted = user.isProfileCompleted;
+
     return {
       refreshToken,
       token,
       tokenExpires,
       user,
+      isProfileCompleted,
     };
   }
 
@@ -186,11 +189,14 @@ export class AuthService {
       sessionId: session.id,
     });
 
+    const isProfileCompleted = user.isProfileCompleted;
+
     return {
       refreshToken,
       token: jwtToken,
       tokenExpires,
       user,
+      isProfileCompleted,
     };
   }
 
@@ -397,10 +403,13 @@ export class AuthService {
       sessionId: session.id,
     });
 
+    const isProfileCompleted = session.user.isProfileCompleted;
+
     return {
       token,
       refreshToken,
       tokenExpires,
+      isProfileCompleted,
     };
   }
 

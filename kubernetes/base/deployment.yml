@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: library-auth-container
-        image: senseydevacr.azurecr.io/authsms:1.0.10
+        image: xxxxx.azurecr.io/authsms:1.0.10
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

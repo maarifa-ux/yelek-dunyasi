@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: library-auth-configmap
-  namespace: dev-sensey-library-auth
+  namespace: dev-xxx-library-auth
 data:
   NODE_ENV: "development"
   APP_PORT: "8080"
@@ -10,10 +10,10 @@ data:
   API_PREFIX: "api"
   APP_FALLBACK_LANGUAGE: "en"
   APP_HEADER_LANGUAGE: "x-custom-lang"
-  FRONTEND_DOMAIN: "library-webui-service.dev-sensey-library-webui.svc.cluster.local"
-  BACKEND_DOMAIN: "library-gateway-service.dev-sensey-application-gateway.svc.cluster.local"
+  FRONTEND_DOMAIN: "library-webui-service.dev-xxxx-library-webui.svc.cluster.local"
+  BACKEND_DOMAIN: "library-gateway-service.dev-xxxx-application-gateway.svc.cluster.local"
   DATABASE_TYPE: "postgres"
-  DATABASE_HOST: "dev-sensey-postgresql.postgres.database.azure.com"
+  DATABASE_HOST: "dev-xxxx-postgresql.postgres.database.azure.com"
   DATABASE_PORT: "5432"
   DATABASE_NAME: "authDB"
   DATABASE_SYNCHRONIZE: "false"
@@ -26,7 +26,7 @@ data:
   MAIL_IGNORE_TLS: ""
   MAIL_SECURE: ""
   MAIL_REQUIRE_TLS: ""
-  MAIL_DEFAULT_EMAIL: "dcanerler@sensey.io"
+  MAIL_DEFAULT_EMAIL: "dcanerler@xxxx.io"
   MAIL_DEFAULT_NAME: ""
   MAIL_CLIENT_PORT: ""
   WORKER_HOST: ""

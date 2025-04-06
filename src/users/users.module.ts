@@ -7,10 +7,11 @@ import { User } from './entities/user.entity';
 import { IsExist } from 'src/utils/validators/is-exists.validator';
 import { IsNotExist } from 'src/utils/validators/is-not-exists.validator';
 import { Role } from 'src/roles/entities/role.entity';
+import { ProfileCompletionController } from './controllers/profile-completion.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User]), TypeOrmModule.forFeature([Role])],
-  controllers: [UsersController],
+  controllers: [UsersController, ProfileCompletionController],
   providers: [IsExist, IsNotExist, UsersService],
   exports: [UsersService],
 })

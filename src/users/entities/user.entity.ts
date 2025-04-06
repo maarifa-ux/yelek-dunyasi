@@ -65,7 +65,7 @@ export class User extends EntityHelper {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   email: string;
 
   @Column({ nullable: true })
@@ -74,28 +74,29 @@ export class User extends EntityHelper {
   @Column({ nullable: true })
   googleId: string;
 
-  @Column()
+  @Column({ nullable: true, default: '' })
   firstName: string;
 
-  @Column()
+  @Column({ nullable: true, default: '' })
   lastName: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   nickname: string;
 
-  @Column()
+  @Column({ nullable: true, default: '' })
   phoneNumber: string;
 
-  @Column()
+  @Column({ nullable: true, default: '' })
   city: string;
 
-  @Column()
+  @Column({ nullable: true, default: '' })
   district: string;
 
   @Column({
     type: 'enum',
     enum: DriverLicenseType,
     default: DriverLicenseType.A,
+    nullable: true,
   })
   driverLicenseType: DriverLicenseType;
 
@@ -103,6 +104,7 @@ export class User extends EntityHelper {
     type: 'enum',
     enum: ClothingSize,
     default: ClothingSize.L,
+    nullable: true,
   })
   clothingSize: ClothingSize;
 
@@ -110,52 +112,53 @@ export class User extends EntityHelper {
     type: 'enum',
     enum: BloodType,
     default: BloodType.UNKNOWN,
+    nullable: true,
   })
   bloodType: BloodType;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   motorcycleBrand: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   motorcycleModel: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: 0 })
   motorcycleCc: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   profilePicture: string;
 
-  @Column({ default: false })
+  @Column({ default: false, nullable: true })
   isEmailVerified: boolean;
 
-  @Column({ default: false })
+  @Column({ default: false, nullable: true })
   isPhoneVerified: boolean;
 
-  @Column({ default: false })
+  @Column({ default: false, nullable: true })
   hasProfilePicture: boolean;
 
-  @Column({ default: true })
+  @Column({ default: true, nullable: true })
   isActive: boolean;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   emergencyContactName: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   emergencyContactRelation: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   emergencyContactPhone: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   oneSignalPlayerId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   phone: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ nullable: true })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ nullable: true })
   updatedAt: Date;
 
   @OneToMany(() => ClubMember, (clubMember) => clubMember.user)
@@ -193,39 +196,46 @@ export class User extends EntityHelper {
     }
   }
 
-  @Column({ default: AuthProvidersEnum.email })
+  @Column({ default: AuthProvidersEnum.email, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
   provider: string;
 
   @Index()
-  @Column({ type: String, nullable: true })
+  @Column({ type: String, nullable: true, default: null })
   @Expose({ groups: ['me', 'admin'] })
   socialId: string | null;
 
-  @Column({ type: String, nullable: true })
+  @Column({ type: String, nullable: true, default: null })
   gender: string | null;
 
-  @Column({ type: 'timestamp without time zone', nullable: true })
+  @Column({
+    type: 'timestamp without time zone',
+    nullable: true,
+    default: null,
+  })
   birthDate: Date | null;
 
-  @Column({ type: String, nullable: true })
+  @Column({ type: String, nullable: true, default: null })
   profession: string | null;
 
-  @Column({ type: String, nullable: true })
+  @Column({ type: String, nullable: true, default: null })
   profileImageUrl: string | null;
 
   @ManyToOne(() => FileEntity, {
     eager: true,
+    nullable: true,
   })
   photo?: FileEntity | null;
 
   @ManyToOne(() => Role, {
     eager: true,
+    nullable: true,
   })
   role?: Role | null;
 
   @ManyToOne(() => Status, {
     eager: true,
+    nullable: true,
   })
   status?: Status;
 
@@ -238,15 +248,30 @@ export class User extends EntityHelper {
   @OneToMany(() => Invitation, (invitation) => invitation.receiverUser)
   receivedInvitations: Invitation[];
 
-  @Column({ type: String, nullable: true })
+  @Column({ type: String, nullable: true, default: null })
   @Index()
   @Exclude({ toPlainOnly: true })
   hash: string | null;
 
-  @DeleteDateColumn()
+  @DeleteDateColumn({ nullable: true })
   deletedAt: Date;
 
   get fullName(): string {
-    return `${this.firstName} ${this.lastName}`;
+    return `${this.firstName || ''} ${this.lastName || ''}`;
+  }
+
+  // Kullanıcının profilinin tamamlanıp tamamlanmadığını kontrol eder
+  get isProfileCompleted(): boolean {
+    // Profilin tamamlanmış sayılması için gerekli alanların kontrolü
+    return Boolean(
+      this.firstName &&
+        this.lastName &&
+        this.nickname &&
+        this.phoneNumber &&
+        this.city &&
+        this.district &&
+        this.motorcycleBrand &&
+        this.motorcycleModel,
+    );
   }
 }

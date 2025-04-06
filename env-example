@@ -8,9 +8,9 @@ FRONTEND_DOMAIN=http://localhost:3000
 BACKEND_DOMAIN=http://localhost:3000
 
 DATABASE_TYPE=postgres
-DATABASE_HOST=dev-sensey-postgresql.postgres.database.azure.com
+DATABASE_HOST=dev-xxxx-postgresql.postgres.database.azure.com
 DATABASE_PORT=5432
-DATABASE_USERNAME=sensey
+DATABASE_USERNAME=xxxx
 DATABASE_PASSWORD=Pathtowisdom123!
 DATABASE_NAME=authDB
 DATABASE_SYNCHRONIZE=false
