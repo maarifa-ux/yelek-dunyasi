@@ -21,55 +21,27 @@ Her istekte `Content-Type: application/json` header'ı kullanılmalıdır.
 
 ## Kimlik Doğrulama
 
-### 1. Kayıt Olma
+### 1. Google ile Giriş/Kayıt
 
-**Endpoint:** `POST /auth/register`
+**Endpoint:** `POST /auth/google/login`
+
+**Açıklama:** Bu endpoint, Google Authentication API'si ile alınan idToken'ı kullanarak kullanıcı girişi veya kaydı yapar. Eğer kullanıcı sistemde yoksa otomatik olarak kayıt edilir, varsa giriş işlemi gerçekleştirilir.
 
 **İstek:**
 
 ```json
 {
-  "email": "kullanici@ornek.com",
-  "password": "guvenli_sifre123",
-  "firstName": "Ahmet",
-  "lastName": "Yılmaz"
+  "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFiYjk2MDVjMzZlOThlM..."
 }
 ```
 
 **Curl Örneği:**
 
 ```bash
-curl -X POST https://api.yeleklidunyasi.com/auth/register \
+curl -X POST https://api.yeleklidunyasi.com/auth/google/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "kullanici@ornek.com",
-    "password": "guvenli_sifre123",
-    "firstName": "Ahmet",
-    "lastName": "Yılmaz"
-  }'
-```
-
-### 2. Giriş Yapma
-
-**Endpoint:** `POST /auth/login`
-
-**İstek:**
-
-```json
-{
-  "email": "kullanici@ornek.com",
-  "password": "guvenli_sifre123"
-}
-```
-
-**Curl Örneği:**
-
-```bash
-curl -X POST https://api.yeleklidunyasi.com/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "kullanici@ornek.com",
-    "password": "guvenli_sifre123"
+    "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFiYjk2MDVjMzZlOThlM..."
   }'
 ```
 
@@ -82,27 +54,41 @@ curl -X POST https://api.yeleklidunyasi.com/auth/login \
   "tokenExpires": 1617567890000,
   "user": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
-    "email": "kullanici@ornek.com",
+    "email": "kullanici@gmail.com",
     "firstName": "Ahmet",
     "lastName": "Yılmaz",
     "role": { "id": 2, "name": "user" },
     "status": { "id": 1, "name": "active" }
   },
-  "isProfileCompleted": false
+  "isProfileCompleted": false,
+  "clubMemberships": [
+    {
+      "clubId": "550e8400-e29b-41d4-a716-446655440001",
+      "clubName": "Yelekli Motosiklet Kulübü",
+      "clubLogo": "http://ornek.com/logo.jpg",
+      "clubCity": "İstanbul",
+      "rank": "member",
+      "rankDescription": "member",
+      "permissions": {
+        "canCreateEvent": false,
+        "canManageMembers": false,
+        "canManageCity": false,
+        "canSendAnnouncement": false,
+        "canAddProduct": false,
+        "canManageClub": false,
+        "canRemoveMember": false,
+        "canManageEvents": false
+      },
+      "status": "active",
+      "events": []
+    }
+  ]
 }
 ```
 
-### 3. Google ile Giriş
+> **Not:** Google ile giriş için, öncelikle istemci tarafında Google Authentication API'si kullanılarak bir idToken alınmalıdır. Bu token daha sonra bu endpoint'e gönderilir.
 
-**Endpoint:** `GET /auth/google`
-
-Kullanıcıyı Google oturum açma sayfasına yönlendirir.
-
-**Callback Endpoint:** `GET /auth/google/callback`
-
-Google başarılı kimlik doğrulamasından sonra kullanıcıyı bu URL'e yönlendirir.
-
-### 4. Yetkilendirme
+### 2. Yetkilendirme
 
 Yetkili API istekleri için, her istekte `Authorization` header'ında JWT token gönderilmelidir:
 
@@ -110,7 +96,7 @@ Yetkili API istekleri için, her istekte `Authorization` header'ında JWT token 
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-### 5. Token Yenileme
+### 3. Token Yenileme
 
 **Endpoint:** `POST /auth/refresh-token`
 
@@ -130,6 +116,47 @@ curl -X POST https://api.yeleklidunyasi.com/auth/refresh-token \
   -d '{
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }'
+```
+
+**Yanıt:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenExpires": 1617567890000,
+  "isProfileCompleted": true,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "kullanici@gmail.com",
+    "firstName": "Ahmet",
+    "lastName": "Yılmaz",
+    "role": { "id": 2, "name": "user" },
+    "status": { "id": 1, "name": "active" }
+  },
+  "clubMemberships": [
+    {
+      "clubId": "550e8400-e29b-41d4-a716-446655440001",
+      "clubName": "Yelekli Motosiklet Kulübü",
+      "clubLogo": "http://ornek.com/logo.jpg",
+      "clubCity": "İstanbul",
+      "rank": "member",
+      "rankDescription": "member",
+      "permissions": {
+        "canCreateEvent": false,
+        "canManageMembers": false,
+        "canManageCity": false,
+        "canSendAnnouncement": false,
+        "canAddProduct": false,
+        "canManageClub": false,
+        "canRemoveMember": false,
+        "canManageEvents": false
+      },
+      "status": "active",
+      "events": []
+    }
+  ]
+}
 ```
 
 ## Kullanıcı İşlemleri
