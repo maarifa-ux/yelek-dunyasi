@@ -25,13 +25,22 @@ import { UsersService } from 'src/users/users.service';
 import { ForgotService } from 'src/forgot/forgot.service';
 import { MailService } from 'src/mail/mail.service';
 import { NullableType } from '../utils/types/nullable.type';
-import { LoginResponseType } from './types/login-response.type';
+import {
+  LoginResponseType,
+  ClubMembershipDetail,
+} from './types/login-response.type';
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from 'src/config/config.type';
 import { SessionService } from 'src/session/session.service';
 import { JwtRefreshPayloadType } from './strategies/types/jwt-refresh-payload.type';
 import { Session } from 'src/session/entities/session.entity';
 import { JwtPayloadType } from './strategies/types/jwt-payload.type';
+import { ClubsService } from 'src/clubs/clubs.service';
+import { EventsService } from 'src/events/events.service';
+import { ClubRoleSetting } from 'src/clubs/entities/club-role-setting.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Event } from 'src/events/entities/event.entity';
 
 @Injectable()
 export class AuthService {
@@ -42,12 +51,26 @@ export class AuthService {
     private sessionService: SessionService,
     private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
+    private clubsService: ClubsService,
+    private eventsService: EventsService,
+    @InjectRepository(ClubRoleSetting)
+    private clubRoleSettingsRepository: Repository<ClubRoleSetting>,
   ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseType> {
-    const user = await this.usersService.findOne({
-      email: loginDto.email,
-    });
+    const user = await this.usersService.findOne(
+      {
+        email: loginDto.email,
+      },
+      {
+        relations: [
+          'clubMemberships',
+          'clubMemberships.club',
+          'clubMemberships.clubCity',
+          'clubMemberships.clubCity.city',
+        ],
+      },
+    );
 
     if (!user) {
       throw new HttpException(
@@ -102,12 +125,74 @@ export class AuthService {
 
     const isProfileCompleted = user.isProfileCompleted;
 
+    // Kullanıcının kulüp üyeliklerini al
+    const clubMemberships = user.clubMemberships || [];
+
+    // Kulüp izinlerini al
+    const roleSettings = await this.clubRoleSettingsRepository.find();
+
+    // Kullanıcının üye olduğu kulüpler için detaylı bilgileri hazırla
+    const clubDetails: ClubMembershipDetail[] = await Promise.all(
+      clubMemberships.map(async (membership) => {
+        // İlgili kulüp rolünün izinlerini bul
+        const roleSetting = roleSettings.find(
+          (setting) => setting.rank === membership.rank,
+        );
+
+        // Şu anki ay içindeki etkinlikleri al
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        let events: Event[] = [];
+        if (membership.clubCityId) {
+          // Şehre özel etkinlikleri al
+          events = await this.eventsService.findByClubCity(
+            membership.clubCityId,
+            startOfMonth,
+            endOfMonth,
+          );
+        } else {
+          // Genel kulüp etkinliklerini al
+          events = await this.eventsService.findByClub(
+            membership.clubId,
+            startOfMonth,
+            endOfMonth,
+          );
+        }
+
+        return {
+          clubId: membership.clubId,
+          clubName: membership.club?.name,
+          clubLogo: membership.club?.logo,
+          clubCity: membership.clubCity?.city?.name,
+          rank: membership.rank,
+          rankDescription: membership.rank,
+          permissions: roleSetting
+            ? {
+                canCreateEvent: roleSetting.canCreateEvent,
+                canManageMembers: roleSetting.canManageMembers,
+                canManageCity: roleSetting.canManageCity,
+                canSendAnnouncement: roleSetting.canSendAnnouncement,
+                canAddProduct: roleSetting.canAddProduct,
+                canManageClub: roleSetting.canManageClub,
+                canRemoveMember: roleSetting.canRemoveMember,
+                canManageEvents: roleSetting.canManageEvents,
+              }
+            : undefined,
+          status: membership.status,
+          events,
+        };
+      }),
+    );
+
     return {
       refreshToken,
       token,
       tokenExpires,
       user,
       isProfileCompleted,
+      clubMemberships: clubDetails,
     };
   }
 
@@ -120,16 +205,36 @@ export class AuthService {
     let userByEmail: NullableType<User> = null;
 
     if (socialEmail) {
-      userByEmail = await this.usersService.findOne({
-        email: socialEmail,
-      });
+      userByEmail = await this.usersService.findOne(
+        {
+          email: socialEmail,
+        },
+        {
+          relations: [
+            'clubMemberships',
+            'clubMemberships.club',
+            'clubMemberships.clubCity',
+            'clubMemberships.clubCity.city',
+          ],
+        },
+      );
     }
 
     if (socialData.id) {
-      user = await this.usersService.findOne({
-        socialId: socialData.id,
-        provider: authProvider,
-      });
+      user = await this.usersService.findOne(
+        {
+          socialId: socialData.id,
+          provider: authProvider,
+        },
+        {
+          relations: [
+            'clubMemberships',
+            'clubMemberships.club',
+            'clubMemberships.clubCity',
+            'clubMemberships.clubCity.city',
+          ],
+        },
+      );
     }
 
     if (user) {
@@ -158,9 +263,19 @@ export class AuthService {
         status,
       });
 
-      user = await this.usersService.findOne({
-        id: user.id,
-      });
+      user = await this.usersService.findOne(
+        {
+          id: user.id,
+        },
+        {
+          relations: [
+            'clubMemberships',
+            'clubMemberships.club',
+            'clubMemberships.clubCity',
+            'clubMemberships.clubCity.city',
+          ],
+        },
+      );
     }
 
     if (!user) {
@@ -191,12 +306,74 @@ export class AuthService {
 
     const isProfileCompleted = user.isProfileCompleted;
 
+    // Kullanıcının kulüp üyeliklerini al
+    const clubMemberships = user.clubMemberships || [];
+
+    // Kulüp izinlerini al
+    const roleSettings = await this.clubRoleSettingsRepository.find();
+
+    // Kullanıcının üye olduğu kulüpler için detaylı bilgileri hazırla
+    const clubDetails: ClubMembershipDetail[] = await Promise.all(
+      clubMemberships.map(async (membership) => {
+        // İlgili kulüp rolünün izinlerini bul
+        const roleSetting = roleSettings.find(
+          (setting) => setting.rank === membership.rank,
+        );
+
+        // Şu anki ay içindeki etkinlikleri al
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        let events: Event[] = [];
+        if (membership.clubCityId) {
+          // Şehre özel etkinlikleri al
+          events = await this.eventsService.findByClubCity(
+            membership.clubCityId,
+            startOfMonth,
+            endOfMonth,
+          );
+        } else {
+          // Genel kulüp etkinliklerini al
+          events = await this.eventsService.findByClub(
+            membership.clubId,
+            startOfMonth,
+            endOfMonth,
+          );
+        }
+
+        return {
+          clubId: membership.clubId,
+          clubName: membership.club?.name,
+          clubLogo: membership.club?.logo,
+          clubCity: membership.clubCity?.city?.name,
+          rank: membership.rank,
+          rankDescription: membership.rank,
+          permissions: roleSetting
+            ? {
+                canCreateEvent: roleSetting.canCreateEvent,
+                canManageMembers: roleSetting.canManageMembers,
+                canManageCity: roleSetting.canManageCity,
+                canSendAnnouncement: roleSetting.canSendAnnouncement,
+                canAddProduct: roleSetting.canAddProduct,
+                canManageClub: roleSetting.canManageClub,
+                canRemoveMember: roleSetting.canRemoveMember,
+                canManageEvents: roleSetting.canManageEvents,
+              }
+            : undefined,
+          status: membership.status,
+          events,
+        };
+      }),
+    );
+
     return {
       refreshToken,
       token: jwtToken,
       tokenExpires,
       user,
       isProfileCompleted,
+      clubMemberships: clubDetails,
     };
   }
 
@@ -314,9 +491,19 @@ export class AuthService {
   }
 
   async me(userJwtPayload: JwtPayloadType): Promise<NullableType<User>> {
-    return this.usersService.findOne({
-      id: userJwtPayload.id,
-    });
+    return this.usersService.findOne(
+      {
+        id: userJwtPayload.id,
+      },
+      {
+        relations: [
+          'clubMemberships',
+          'clubMemberships.club',
+          'clubMemberships.clubCity',
+          'clubMemberships.clubCity.city',
+        ],
+      },
+    );
   }
 
   async update(
@@ -379,14 +566,24 @@ export class AuthService {
 
     await this.usersService.update(userJwtPayload.id, userDto);
 
-    return this.usersService.findOne({
-      id: userJwtPayload.id,
-    });
+    return this.usersService.findOne(
+      {
+        id: userJwtPayload.id,
+      },
+      {
+        relations: [
+          'clubMemberships',
+          'clubMemberships.club',
+          'clubMemberships.clubCity',
+          'clubMemberships.clubCity.city',
+        ],
+      },
+    );
   }
 
   async refreshToken(
     data: Pick<JwtRefreshPayloadType, 'sessionId'>,
-  ): Promise<Omit<LoginResponseType, 'user'>> {
+  ): Promise<Omit<LoginResponseType, 'user'> & { user: User }> {
     const session = await this.sessionService.findOne({
       where: {
         id: data.sessionId,
@@ -397,19 +594,99 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
+    // User ilişkilerini manuel olarak yükle
+    const user = await this.usersService.findOne(
+      { id: session.user.id },
+      {
+        relations: [
+          'clubMemberships',
+          'clubMemberships.club',
+          'clubMemberships.clubCity',
+          'clubMemberships.clubCity.city',
+        ],
+      },
+    );
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
     const { token, refreshToken, tokenExpires } = await this.getTokensData({
-      id: session.user.id,
-      role: session.user.role,
+      id: user.id,
+      role: user.role,
       sessionId: session.id,
     });
 
-    const isProfileCompleted = session.user.isProfileCompleted;
+    const isProfileCompleted = user.isProfileCompleted;
+
+    // Kullanıcının kulüp üyeliklerini al
+    const clubMemberships = user.clubMemberships || [];
+
+    // Kulüp izinlerini al
+    const roleSettings = await this.clubRoleSettingsRepository.find();
+
+    // Kullanıcının üye olduğu kulüpler için detaylı bilgileri hazırla
+    const clubDetails: ClubMembershipDetail[] = await Promise.all(
+      clubMemberships.map(async (membership) => {
+        // İlgili kulüp rolünün izinlerini bul
+        const roleSetting = roleSettings.find(
+          (setting) => setting.rank === membership.rank,
+        );
+
+        // Şu anki ay içindeki etkinlikleri al
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        let events: Event[] = [];
+        if (membership.clubCityId) {
+          // Şehre özel etkinlikleri al
+          events = await this.eventsService.findByClubCity(
+            membership.clubCityId,
+            startOfMonth,
+            endOfMonth,
+          );
+        } else {
+          // Genel kulüp etkinliklerini al
+          events = await this.eventsService.findByClub(
+            membership.clubId,
+            startOfMonth,
+            endOfMonth,
+          );
+        }
+
+        return {
+          clubId: membership.clubId,
+          clubName: membership.club?.name,
+          clubLogo: membership.club?.logo,
+          clubCity: membership.clubCity?.city?.name,
+          rank: membership.rank,
+          rankDescription: membership.rank,
+          permissions: roleSetting
+            ? {
+                canCreateEvent: roleSetting.canCreateEvent,
+                canManageMembers: roleSetting.canManageMembers,
+                canManageCity: roleSetting.canManageCity,
+                canSendAnnouncement: roleSetting.canSendAnnouncement,
+                canAddProduct: roleSetting.canAddProduct,
+                canManageClub: roleSetting.canManageClub,
+                canRemoveMember: roleSetting.canRemoveMember,
+                canManageEvents: roleSetting.canManageEvents,
+              }
+            : undefined,
+          status: membership.status,
+          events,
+        };
+      }),
+    );
 
     return {
       token,
       refreshToken,
       tokenExpires,
       isProfileCompleted,
+      user,
+      clubMemberships: clubDetails,
     };
   }
 

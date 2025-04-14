@@ -4,7 +4,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ErrorResponseFactory } from 'src/responses/error-response.factory';
 import { EntityCondition } from 'src/utils/types/entity-condition.type';
 import { IPaginationOptions } from 'src/utils/types/pagination-options';
-import { FindOperator, FindOptionsWhere, Repository, In, Like } from 'typeorm';
+import {
+  FindOperator,
+  FindOptionsWhere,
+  Repository,
+  In,
+  Like,
+  FindOneOptions,
+} from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { FilterUserDto, SortUserDto } from './dto/query-user.dto';
 import { User } from './entities/user.entity';
@@ -103,9 +110,13 @@ export class UsersService {
     return this.usersRepository.exist({ where: { id } });
   }
 
-  findOne(fields: EntityCondition<User>) {
+  findOne(
+    fields: EntityCondition<User>,
+    options?: Omit<FindOneOptions<User>, 'where'>,
+  ) {
     return this.usersRepository.findOne({
       where: fields,
+      ...options,
     });
   }
 
@@ -130,8 +141,11 @@ export class UsersService {
     await this.usersRepository.softDelete(id);
   }
 
-  async findById(id: string): Promise<User> {
-    const user = await this.findOne({ id });
+  async findById(
+    id: string,
+    options?: Omit<FindOneOptions<User>, 'where'>,
+  ): Promise<User> {
+    const user = await this.findOne({ id }, options);
     if (!user) {
       throw new NotFoundException('Kullanıcı bulunamadı');
     }

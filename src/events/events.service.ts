@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Event, EventStatus } from './entities/event.entity';
 import {
   EventParticipant,
@@ -597,5 +597,45 @@ export class EventsService {
 
   async getParticipants(eventId: string): Promise<EventParticipant[]> {
     return this.getEventParticipants(eventId);
+  }
+
+  /**
+   * Belirli bir kulüp için etkinlikleri belirli tarih aralığında getirir
+   */
+  async findByClub(
+    clubId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Event[]> {
+    return this.eventRepository.find({
+      where: {
+        clubId,
+        startDate: Between(startDate, endDate),
+      },
+      relations: ['club', 'creator', 'participants'],
+      order: {
+        startDate: 'ASC',
+      },
+    });
+  }
+
+  /**
+   * Belirli bir kulüp şehri için etkinlikleri belirli tarih aralığında getirir
+   */
+  async findByClubCity(
+    clubCityId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Event[]> {
+    return this.eventRepository.find({
+      where: {
+        clubCityId,
+        startDate: Between(startDate, endDate),
+      },
+      relations: ['club', 'creator', 'clubCity', 'participants'],
+      order: {
+        startDate: 'ASC',
+      },
+    });
   }
 }
