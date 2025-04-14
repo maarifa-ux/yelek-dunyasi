@@ -22,6 +22,7 @@ Bu dokümantasyon, Yelekli Dünyası uygulamasının tüm API endpointlerini, is
 - [Kullanıcı İşlemleri](#kullanıcı-i̇şlemleri)
   - [1. Kullanıcı Profili Görüntüleme](#1-kullanıcı-profili-görüntüleme)
   - [2. Kullanıcı Profilini Güncelleme](#2-kullanıcı-profilini-güncelleme)
+  - [3. Şifre Değiştirme](#3-şifre-değiştirme)
   - [4. Profil Fotoğrafı Güncelleme](#4-profil-fotoğrafı-güncelleme)
   - [5. Kullanıcı Bildirim Ayarlarını Güncelleme](#5-kullanıcı-bildirim-ayarlarını-güncelleme)
   - [6. OneSignal Player ID Güncelleme](#6-onesignal-player-id-güncelleme)
@@ -29,6 +30,7 @@ Bu dokümantasyon, Yelekli Dünyası uygulamasının tüm API endpointlerini, is
 - [Profil Tamamlama](#profil-tamamlama)
   - [1. Profil Tamamlama Durumu Kontrol Etme](#1-profil-tamamlama-durumu-kontrol-etme)
   - [2. Profil Tamamlama](#2-profil-tamamlama)
+  - [3. Profil Tamamlama Alanlarını Kontrol Etme](#3-profil-tamamlama-alanlarını-kontrol-etme)
 - [Kulüp İşlemleri](#kulüp-i̇şlemleri)
   - [1. Kulüp Oluşturma](#1-kulüp-oluşturma)
   - [2. Kulüp Listesini Görüntüleme](#2-kulüp-listesini-görüntüleme)
@@ -579,6 +581,68 @@ curl -X PATCH https://api.yeleklidunyasi.com/auth/me \
 - Tüm alanları birden güncellemek zorunlu değildir, sadece değiştirilmek istenen alanlar gönderilebilir
 - Email değişikliği bu endpoint ile yapılamaz, email değişikliği özel bir süreç gerektirir
 
+### 3. Şifre Değiştirme
+
+**Endpoint:** `PATCH /auth/password`
+
+**Açıklama:** Bu endpoint, kullanıcının mevcut şifresini değiştirmesini sağlar. Kullanıcının önce mevcut şifresini doğrulaması gerekir.
+
+**Yetkilendirme:** Evet, JWT Token gereklidir.
+
+**İstek:**
+
+```json
+{
+  "oldPassword": "guvenli_sifre123",
+  "newPassword": "yeni_guvenli_sifre456"
+}
+```
+
+**Curl Örneği:**
+
+```bash
+curl -X PATCH https://api.yeleklidunyasi.com/auth/password \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "oldPassword": "guvenli_sifre123",
+    "newPassword": "yeni_guvenli_sifre456"
+  }'
+```
+
+**Başarılı Yanıt (200 OK):**
+
+```json
+{
+  "success": true,
+  "message": "Şifre başarıyla güncellendi"
+}
+```
+
+**Hata Yanıtları:**
+
+| HTTP Kodu | Hata Kodu | Açıklama |
+|-----------|-----------|----------|
+| 401 | Unauthorized | Yetkilendirme hatası |
+| 400 | wrongPassword | Mevcut şifre hatalı |
+| 422 | validationError | Yeni şifre geçerli değil (örn. çok kısa) |
+
+**Doğrulama Kuralları:**
+
+| Alan | Kural |
+|------|-------|
+| oldPassword | Kullanıcının mevcut şifresi |
+| newPassword | En az 8 karakter, en az bir büyük harf, bir küçük harf ve bir rakam içermeli |
+
+**İstemci Kullanım Senaryosu:**
+- Kullanıcı profil ayarlarından şifresini değiştirmek istediğinde kullanılır
+- Güvenlik nedeniyle şifre güncellenmesi gerektiğinde kullanılır
+
+**Önemli Notlar:**
+- Uygulamada Google ile giriş kullanıldığı için bu endpoint, sadece email/şifre ile kayıt olan kullanıcılar için geçerlidir
+- Şifre değişikliğinden sonra kullanıcının mevcut oturumu geçerli kalmaya devam eder
+- Şifre başarıyla değiştirildikten sonra, kullanıcının diğer cihazlardaki oturumları sonlandırılmaz
+
 ### 4. Profil Fotoğrafı Güncelleme
 
 **Endpoint:** `POST /auth/me/profile-picture`
@@ -839,6 +903,10 @@ curl -X GET "https://api.yeleklidunyasi.com/users/search?query=ahmet&page=1&limi
 
 **Endpoint:** `GET /profile-completion/status`
 
+**Açıklama:** Bu endpoint, kullanıcının profil tamamlama durumunu kontrol eder ve eksik alanları listeler.
+
+**Yetkilendirme:** Evet, JWT Token gereklidir.
+
 **Curl Örneği:**
 
 ```bash
@@ -846,7 +914,7 @@ curl -X GET https://api.yeleklidunyasi.com/profile-completion/status \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
-**Yanıt:**
+**Başarılı Yanıt (200 OK):**
 
 ```json
 {
@@ -859,13 +927,33 @@ curl -X GET https://api.yeleklidunyasi.com/profile-completion/status \
     "district",
     "motorcycleBrand",
     "motorcycleModel"
-  ]
+  ],
+  "progress": 40
 }
 ```
+
+**Hata Yanıtları:**
+
+| HTTP Kodu | Hata Kodu | Açıklama |
+|-----------|-----------|----------|
+| 401 | Unauthorized | Yetkilendirme hatası |
+
+**İstemci Kullanım Senaryosu:**
+- Uygulama ilk açıldığında kullanıcının profil tamamlama durumunu kontrol etmek için kullanılır
+- Tamamlanmayan profil için kullanıcıya hatırlatma yapmak için kullanılır
+- Profil tamamlama ekranında ilerleme durumunu göstermek için kullanılır
+
+**Önemli Notlar:**
+- `progress` alanı, profil tamamlama yüzdesini belirtir (0-100 arası)
+- `missingFields` alanı, tamamlanması gereken zorunlu alanları listeler
 
 ### 2. Profil Tamamlama
 
 **Endpoint:** `PATCH /profile-completion/complete`
+
+**Açıklama:** Bu endpoint, kullanıcının ilk kayıt sonrası profil bilgilerini tamamlamasını sağlar. Bu işlem, uygulamayı kullanabilmek için gereklidir.
+
+**Yetkilendirme:** Evet, JWT Token gereklidir.
 
 **İstek:**
 
@@ -878,10 +966,12 @@ curl -X GET https://api.yeleklidunyasi.com/profile-completion/status \
   "motorcycleBrand": "Honda",
   "motorcycleModel": "CBR 250R",
   "motorcycleCc": 250,
-  "profilePicture": "http://ornek.com/resim.jpg",
   "bloodType": "A_POSITIVE",
   "clothingSize": "XL",
-  "driverLicenseType": "A2"
+  "driverLicenseType": "A2",
+  "emergencyContactName": "Mehmet Yılmaz",
+  "emergencyContactRelation": "Kardeş",
+  "emergencyContactPhone": "+905551234568"
 }
 ```
 
@@ -899,12 +989,189 @@ curl -X PATCH https://api.yeleklidunyasi.com/profile-completion/complete \
     "motorcycleBrand": "Honda",
     "motorcycleModel": "CBR 250R",
     "motorcycleCc": 250,
-    "profilePicture": "http://ornek.com/resim.jpg",
     "bloodType": "A_POSITIVE",
     "clothingSize": "XL",
-    "driverLicenseType": "A2"
+    "driverLicenseType": "A2",
+    "emergencyContactName": "Mehmet Yılmaz",
+    "emergencyContactRelation": "Kardeş",
+    "emergencyContactPhone": "+905551234568"
   }'
 ```
+
+**Başarılı Yanıt (200 OK):**
+
+```json
+{
+  "success": true,
+  "message": "Profil başarıyla tamamlandı",
+  "isProfileCompleted": true,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "kullanici@gmail.com",
+    "firstName": "Ahmet",
+    "lastName": "Yılmaz",
+    "nickname": "motosikletci",
+    "phoneNumber": "+905551234567",
+    "city": "İstanbul",
+    "district": "Kadıköy",
+    "motorcycleBrand": "Honda",
+    "motorcycleModel": "CBR 250R",
+    "motorcycleCc": 250,
+    "bloodType": "A_POSITIVE",
+    "clothingSize": "XL",
+    "driverLicenseType": "A2",
+    "emergencyContactName": "Mehmet Yılmaz",
+    "emergencyContactRelation": "Kardeş",
+    "emergencyContactPhone": "+905551234568",
+    "role": { "id": 2, "name": "user" },
+    "status": { "id": 1, "name": "active" }
+  }
+}
+```
+
+**Hata Yanıtları:**
+
+| HTTP Kodu | Hata Kodu | Açıklama |
+|-----------|-----------|----------|
+| 401 | Unauthorized | Yetkilendirme hatası |
+| 422 | validationError | Doğrulama hatası, bir veya daha fazla alan geçersiz |
+
+**İstemci Kullanım Senaryosu:**
+- Kullanıcı ilk kayıt sonrası zorunlu profil bilgilerini tamamlarken kullanılır
+- Profil tamamlama ekranında tek seferde tüm bilgileri göndermek için kullanılır
+
+**Önemli Notlar:**
+- Bu endpoint, `/auth/me` endpointinden farklıdır ve sadece profil tamamlama işlemi için kullanılır
+- Tüm zorunlu alanların doldurulması gereklidir, aksi halde doğrulama hatası alınır
+- Profil tamamlandıktan sonra, kullanıcı uygulamanın tüm özelliklerine erişebilir
+
+### 3. Profil Tamamlama Alanlarını Kontrol Etme
+
+**Endpoint:** `GET /profile-completion/fields`
+
+**Açıklama:** Bu endpoint, profil tamamlama için gerekli alanları ve bunların özelliklerini döndürür.
+
+**Yetkilendirme:** Evet, JWT Token gereklidir.
+
+**Curl Örneği:**
+
+```bash
+curl -X GET https://api.yeleklidunyasi.com/profile-completion/fields \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Başarılı Yanıt (200 OK):**
+
+```json
+{
+  "requiredFields": [
+    {
+      "name": "nickname",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 20,
+      "required": true,
+      "description": "Kullanıcı adı veya takma ad"
+    },
+    {
+      "name": "phoneNumber",
+      "type": "string",
+      "pattern": "^\\+90[0-9]{10}$",
+      "required": true,
+      "description": "Telefon numarası (başında +90 ile)"
+    },
+    {
+      "name": "city",
+      "type": "string",
+      "required": true,
+      "description": "Şehir"
+    },
+    {
+      "name": "district",
+      "type": "string",
+      "required": true,
+      "description": "İlçe"
+    },
+    {
+      "name": "motorcycleBrand",
+      "type": "string",
+      "required": true,
+      "description": "Motosiklet markası"
+    },
+    {
+      "name": "motorcycleModel",
+      "type": "string",
+      "required": true,
+      "description": "Motosiklet modeli"
+    }
+  ],
+  "optionalFields": [
+    {
+      "name": "motorcycleCc",
+      "type": "number",
+      "min": 0,
+      "max": 3000,
+      "required": false,
+      "description": "Motosiklet motor hacmi (cc)"
+    },
+    {
+      "name": "bloodType",
+      "type": "enum",
+      "enum": ["A_POSITIVE", "A_NEGATIVE", "B_POSITIVE", "B_NEGATIVE", "AB_POSITIVE", "AB_NEGATIVE", "O_POSITIVE", "O_NEGATIVE"],
+      "required": false,
+      "description": "Kan grubu"
+    },
+    {
+      "name": "clothingSize",
+      "type": "enum",
+      "enum": ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+      "required": false,
+      "description": "Kıyafet bedeni"
+    },
+    {
+      "name": "driverLicenseType",
+      "type": "enum",
+      "enum": ["A", "A1", "A2", "B", "B1", "C", "D", "E", "F", "G", "M"],
+      "required": false,
+      "description": "Sürücü belgesi tipi"
+    },
+    {
+      "name": "emergencyContactName",
+      "type": "string",
+      "required": false,
+      "description": "Acil durum kişi adı"
+    },
+    {
+      "name": "emergencyContactRelation",
+      "type": "string",
+      "required": false,
+      "description": "Acil durum kişi yakınlık derecesi"
+    },
+    {
+      "name": "emergencyContactPhone",
+      "type": "string",
+      "pattern": "^\\+90[0-9]{10}$",
+      "required": false,
+      "description": "Acil durum kişi telefon numarası"
+    }
+  ]
+}
+```
+
+**Hata Yanıtları:**
+
+| HTTP Kodu | Hata Kodu | Açıklama |
+|-----------|-----------|----------|
+| 401 | Unauthorized | Yetkilendirme hatası |
+
+**İstemci Kullanım Senaryosu:**
+- Profil tamamlama ekranını dinamik olarak oluşturmak için kullanılır
+- Her alanın doğrulama kurallarını istemci tarafında uygulamak için kullanılır
+
+**Önemli Notlar:**
+- `requiredFields` alanı, profil tamamlamak için zorunlu olan alanları içerir
+- `optionalFields` alanı, isteğe bağlı olarak doldurulabilecek alanları içerir
+- Her alan için tip bilgisi, doğrulama kuralları ve açıklama bilgisi sağlanır
 
 ## Kulüp İşlemleri
 
