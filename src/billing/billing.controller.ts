@@ -5,8 +5,11 @@ import { BillingService } from './billing.service';
 import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 
-@ApiTags('Ödeme')
-@Controller('billing')
+@ApiTags('Faturalandırma')
+@Controller({
+  path: 'billing',
+  version: '1',
+})
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 

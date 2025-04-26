@@ -21,7 +21,10 @@ import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Pazar Yeri')
-@Controller('marketplace')
+@Controller({
+  path: 'marketplace',
+  version: '1',
+})
 export class MarketplaceController {
   constructor(private readonly marketplaceService: MarketplaceService) {}
 

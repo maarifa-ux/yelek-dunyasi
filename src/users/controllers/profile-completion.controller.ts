@@ -7,7 +7,10 @@ import { UsersService } from '../users.service';
 import { CompleteProfileDto } from '../dto/complete-profile.dto';
 
 @ApiTags('Profil Tamamlama')
-@Controller('profile-completion')
+@Controller({
+  path: 'profile-completion',
+  version: '1',
+})
 export class ProfileCompletionController {
   constructor(private readonly usersService: UsersService) {}
 

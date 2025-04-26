@@ -9,7 +9,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SearchService, SearchResult } from './search.service';
 
 @ApiTags('Arama')
-@Controller('search')
+@Controller({
+  path: 'search',
+  version: '1',
+})
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 

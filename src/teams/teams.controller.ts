@@ -13,7 +13,10 @@ import { CreateTeamDTO } from './dto/create-team.dto';
 import { TeamsService } from './teams.service';
 
 @ApiTags('Teams')
-@Controller({ path: 'teams', version: '1' })
+@Controller({
+  path: 'teams',
+  version: '1',
+})
 export class TeamsController {
   constructor(private teamsService: TeamsService) {}
   @Get('/by-id/:teamID')

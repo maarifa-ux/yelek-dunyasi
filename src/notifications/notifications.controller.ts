@@ -7,7 +7,10 @@ import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Bildirimler')
-@Controller('notifications')
+@Controller({
+  path: 'notifications',
+  version: '1',
+})
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

@@ -22,8 +22,11 @@ import { Ride } from './entities/ride.entity';
 import { RideParticipant } from './entities/ride.entity';
 import { RideStatus } from './entities/ride.entity';
 
-@ApiTags('rides')
-@Controller('rides')
+@ApiTags('Sürüşler')
+@Controller({
+  path: 'rides',
+  version: '1',
+})
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class RideController {

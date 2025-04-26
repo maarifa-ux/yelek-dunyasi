@@ -12,6 +12,10 @@ import { IsExist } from 'src/utils/validators/is-exists.validator';
 import { IsNotExist } from 'src/utils/validators/is-not-exists.validator';
 import { SessionModule } from 'src/session/session.module';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { ClubsModule } from 'src/clubs/clubs.module';
+import { EventsModule } from 'src/events/events.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ClubRoleSetting } from 'src/clubs/entities/club-role-setting.entity';
 
 @Module({
   imports: [
@@ -20,6 +24,9 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
     SessionModule,
     PassportModule,
     MailModule,
+    ClubsModule,
+    EventsModule,
+    TypeOrmModule.forFeature([ClubRoleSetting]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'gizli_anahtar',
       signOptions: { expiresIn: '30d' },

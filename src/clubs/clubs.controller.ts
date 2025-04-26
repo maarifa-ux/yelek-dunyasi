@@ -24,7 +24,10 @@ import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Kulüpler')
-@Controller('clubs')
+@Controller({
+  path: 'clubs',
+  version: '1',
+})
 export class ClubsController {
   constructor(private readonly clubsService: ClubsService) {}
 

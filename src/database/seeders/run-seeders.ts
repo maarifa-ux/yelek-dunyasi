@@ -8,6 +8,7 @@ import {
   seedClubStatuses,
 } from './club-rank-seeder';
 import * as dotenv from 'dotenv';
+import { join } from 'path';
 
 // .env dosyasını yükle
 dotenv.config();
@@ -15,14 +16,17 @@ dotenv.config();
 async function runSeeders() {
   const dataSource = new DataSource({
     type: 'postgres',
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: Number(process.env.DATABASE_PORT) || 5432,
-    username: process.env.DATABASE_USERNAME || 'sa',
-    password: process.env.DATABASE_PASSWORD || 'sapass',
-    database: process.env.DATABASE_NAME || 'yelekli_dunyasi',
-    entities: ['dist/**/*.entity{.ts,.js}'],
-    migrations: ['dist/database/migrations/*{.ts,.js}'],
-    synchronize: false,
+    host: 'yelekdunyasi.cdkugmi6qnk2.eu-north-1.rds.amazonaws.com',
+    port: 5432,
+    username: 'postgres',
+    password: 'yelekdunyasi',
+    database: 'postgres',
+    entities: [join(__dirname, '..', '..', '**', '*.entity.{ts,js}')],
+    migrations: [join(__dirname, '..', 'migrations', '*.{ts,js}')],
+    synchronize: true,
+    ssl: {
+      rejectUnauthorized: false,
+    },
   });
 
   try {

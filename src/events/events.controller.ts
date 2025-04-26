@@ -22,7 +22,10 @@ import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Etkinlikler')
-@Controller('events')
+@Controller({
+  path: 'events',
+  version: '1',
+})
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 

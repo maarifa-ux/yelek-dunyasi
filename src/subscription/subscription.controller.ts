@@ -17,7 +17,10 @@ import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Abonelikler')
-@Controller('subscriptions')
+@Controller({
+  path: 'subscriptions',
+  version: '1',
+})
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 

@@ -1,4 +1,7 @@
 import { Controller } from '@nestjs/common';
 
-@Controller('app-management')
+@Controller({
+  path: 'app-management',
+  version: '1',
+})
 export class AppManagementController {}

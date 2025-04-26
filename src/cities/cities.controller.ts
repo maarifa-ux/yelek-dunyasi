@@ -19,7 +19,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../users/entities/role.enum';
 
 @ApiTags('Şehirler')
-@Controller('cities')
+@Controller({
+  path: 'cities',
+  version: '1',
+})
 export class CitiesController {
   constructor(private readonly citiesService: CitiesService) {}
 

@@ -16,7 +16,7 @@ import validationOptions from './utils/validation-options';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    cors:true,
+    cors: true,
     bodyParser: true,
   });
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
@@ -31,6 +31,7 @@ async function bootstrap() {
   );
   app.enableVersioning({
     type: VersioningType.URI,
+    defaultVersion: '1',
   });
   app.useGlobalPipes(new ValidationPipe(validationOptions));
   app.useGlobalInterceptors(
