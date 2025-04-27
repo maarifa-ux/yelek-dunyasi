@@ -13,6 +13,7 @@ import { AllConfigType } from './config/config.type';
 import { HttpExceptionFilter } from './filter/exception.filter';
 import { ManipulationInterceptor } from './interceptor/manipulation.interceptor';
 import validationOptions from './utils/validation-options';
+import { writeFileSync } from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -49,6 +50,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('docs', app, document);
+  writeFileSync('./swagger-spec.json', JSON.stringify(document));
 
   await app.listen(configService.getOrThrow('app.port', { infer: true }));
 }
