@@ -22,6 +22,7 @@ import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { AddCityDto } from './dto/add-city.dto';
 import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { PaginationDto } from './dto/pagination.dto';
 
 @ApiTags('Kulüpler')
 @Controller({
@@ -139,8 +140,15 @@ export class ClubsController {
 
   @Get(':id/announcements')
   @ApiOperation({ summary: 'Kulüp duyurularını listele' })
-  getAnnouncements(@Param('id') clubId: string) {
-    return this.clubsService.getAnnouncements(clubId);
+  getAnnouncements(
+    @Param('id') clubId: string,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.clubsService.getAnnouncements(
+      clubId,
+      paginationDto.page,
+      paginationDto.limit,
+    );
   }
 
   // Notlar

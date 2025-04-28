@@ -310,14 +310,33 @@ export class ClubsService {
     return announcement;
   }
 
-  async getAnnouncements(clubId: string): Promise<Announcement[]> {
+  async getAnnouncements(
+    clubId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    data: Announcement[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     await this.findOne(clubId);
 
-    return this.announcementRepository.find({
-      where: { clubId, isActive: true },
-      relations: ['createdBy', 'targetCity'],
-      order: { createdAt: 'DESC' },
-    });
+    const [announcements, total] =
+      await this.announcementRepository.findAndCount({
+        where: { clubId, isActive: true },
+        relations: ['createdBy', 'targetCity'],
+        order: { createdAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+    return {
+      data: announcements,
+      total,
+      page,
+      limit,
+    };
   }
 
   // Notlar
