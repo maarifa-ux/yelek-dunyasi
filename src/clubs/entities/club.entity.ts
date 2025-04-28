@@ -42,6 +42,9 @@ export class Club {
   @Column({ nullable: true })
   logo: string;
 
+  @Column({ nullable: true })
+  cover: string;
+
   @Column({
     type: 'enum',
     enum: ClubType,

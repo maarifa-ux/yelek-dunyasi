@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
@@ -20,12 +20,17 @@ export class CreateClubDto {
   @IsNotEmpty()
   description: string;
 
-  @ApiProperty({ description: 'Kulüp logosu (URL)', required: false })
+  @ApiPropertyOptional({ description: 'Kulüp logosu URL' })
   @IsString()
   @IsOptional()
   logo?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({ description: 'Kulüp kapak resmi URL' })
+  @IsString()
+  @IsOptional()
+  cover?: string;
+
+  @ApiPropertyOptional({
     description: 'Kulüp tipi',
     enum: ClubType,
     default: ClubType.PRIVATE,

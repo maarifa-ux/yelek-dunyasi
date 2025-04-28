@@ -1,8 +1,8 @@
 import { PartialType } from '@nestjs/swagger';
 import { CreateClubDto } from './create-club.dto';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { ClubStatus } from '../entities/club.entity';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ClubStatus, ClubType } from '../entities/club.entity';
 
 export class UpdateClubDto extends PartialType(CreateClubDto) {
   @ApiProperty({
@@ -18,4 +18,29 @@ export class UpdateClubDto extends PartialType(CreateClubDto) {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Kulüp adı' })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Kulüp açıklaması' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Kulüp logosu URL' })
+  @IsString()
+  @IsOptional()
+  logo?: string;
+
+  @ApiPropertyOptional({ description: 'Kulüp kapak resmi URL' })
+  @IsString()
+  @IsOptional()
+  cover?: string;
+
+  @ApiPropertyOptional({ description: 'Kulüp tipi', enum: ClubType })
+  @IsEnum(ClubType)
+  @IsOptional()
+  type?: ClubType;
 }
