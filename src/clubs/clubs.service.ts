@@ -37,6 +37,41 @@ export interface ClubEventWithClubName {
   startDate: Date;
   endDate: Date;
   clubName: string;
+  startLocation: string;
+  startLocationLatitude: number;
+  startLocationLongitude: number;
+  endLocation: string | null;
+  endLocationLatitude: number | null;
+  endLocationLongitude: number | null;
+  maxParticipants: number;
+  currentParticipants: number;
+  status: string;
+  type: string;
+  creator: {
+    id: string;
+    fullName: string;
+    email: string;
+    avatar: string | null;
+  };
+  participants: {
+    id: string;
+    fullName: string;
+    email: string;
+    avatar: string | null;
+    joinDate: Date;
+    status: string;
+  }[];
+  city: {
+    id: string;
+    name: string;
+  } | null;
+  club: {
+    id: string;
+    name: string;
+    logo: string;
+    type: string;
+    memberCount: number;
+  };
 }
 
 export interface UserClubEventsResult {
@@ -633,6 +668,9 @@ export class ClubsService {
         'club.events',
         'club.events.participants',
         'club.events.participants.user',
+        'club.events.creator',
+        'club.events.clubCity',
+        'club.events.clubCity.city',
       ],
     });
 
@@ -666,9 +704,8 @@ export class ClubsService {
 
       if (club.events) {
         for (const event of club.events) {
-          const isParticipant = event.participants?.some(
-            (p) => p.user.id === userId,
-          );
+          const participants = event.participants || [];
+          const isParticipant = participants.some((p) => p.user.id === userId);
           const eventDate = new Date(event.startDate);
 
           const eventWithClubName: ClubEventWithClubName = {
@@ -677,7 +714,44 @@ export class ClubsService {
             description: event.description,
             startDate: event.startDate,
             endDate: event.endDate,
+            startLocation: event.startLocation,
+            startLocationLatitude: event.startLocationLatitude,
+            startLocationLongitude: event.startLocationLongitude,
+            endLocation: event.endLocation,
+            endLocationLatitude: event.endLocationLatitude,
+            endLocationLongitude: event.endLocationLongitude,
+            maxParticipants: event.capacity || 0,
+            currentParticipants: event.participantCount,
+            status: event.status,
+            type: event.type,
             clubName: club.name,
+            creator: {
+              id: event.creator.id,
+              fullName: event.creator.fullName,
+              email: event.creator.email,
+              avatar: event.creator.profileImageUrl,
+            },
+            participants: participants.map((p) => ({
+              id: p.user.id,
+              fullName: p.user.fullName,
+              email: p.user.email,
+              avatar: p.user.profileImageUrl,
+              joinDate: p.createdAt,
+              status: p.status,
+            })),
+            city: event.clubCity
+              ? {
+                  id: event.clubCity.id,
+                  name: event.clubCity.city?.name,
+                }
+              : null,
+            club: {
+              id: club.id,
+              name: club.name,
+              logo: club.logo || '',
+              type: club.type,
+              memberCount: club.memberCount,
+            },
           };
 
           if (isParticipant) {
