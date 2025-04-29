@@ -111,7 +111,19 @@ export class ClubsService {
   async findOne(id: string): Promise<Club> {
     const club = await this.clubRepository.findOne({
       where: { id },
-      relations: ['founder'],
+      relations: [
+        'founder',
+        'founder.role',
+        'founder.status',
+        'members',
+        'members.user',
+        'members.clubCity',
+        'announcements',
+        'announcements.createdBy',
+        'announcements.targetCity',
+        'events',
+        'cities',
+      ],
     });
 
     if (!club) {

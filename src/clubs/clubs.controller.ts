@@ -23,6 +23,7 @@ import { AddCityDto } from './dto/add-city.dto';
 import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { PaginationDto } from './dto/pagination.dto';
+import { Club } from './entities/club.entity';
 
 @ApiTags('Kulüpler')
 @Controller({
@@ -48,7 +49,7 @@ export class ClubsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Kulüp detaylarını getir' })
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string): Promise<Club> {
     return this.clubsService.findOne(id);
   }
 

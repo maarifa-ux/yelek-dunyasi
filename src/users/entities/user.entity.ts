@@ -1,10 +1,10 @@
 /* eslint-disable prettier/prettier */
 import bcrypt from 'bcryptjs';
 import { Exclude, Expose } from 'class-transformer';
-import { AuthProvidersEnum } from 'src/auth/auth-providers.enum';
-import { Invitation } from 'src/teams/entities/invitation.entity';
-import { TeamMember } from 'src/teams/entities/teams_to_members.entity';
-import { EntityHelper } from 'src/utils/entity-helper';
+import { AuthProvidersEnum } from '../../auth/auth-providers.enum';
+import { Invitation } from '../../teams/entities/invitation.entity';
+import { TeamMember } from '../../teams/entities/teams_to_members.entity';
+import { EntityHelper } from '../../utils/entity-helper';
 import {
   AfterLoad,
   BeforeInsert,

@@ -7,6 +7,8 @@ import {
   seedClubTypes,
   seedClubStatuses,
 } from './club-rank-seeder';
+import { CitiesSeed } from '../seeds/cities/cities.seed';
+import { City } from '../../cities/entities/city.entity';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
 
@@ -44,6 +46,11 @@ async function runSeeders() {
     await seedMemberStatuses(dataSource);
     await seedClubTypes(dataSource);
     await seedClubStatuses(dataSource);
+
+    // Şehir seeder'ı
+    console.log("\n--- Şehir Seeder'ı Çalıştırılıyor ---");
+    const citiesSeed = new CitiesSeed(dataSource.getRepository(City));
+    await citiesSeed.run();
 
     console.log('\nTüm seeder işlemleri tamamlandı.');
   } catch (error) {
