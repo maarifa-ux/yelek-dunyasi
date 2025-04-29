@@ -30,6 +30,26 @@ import { randomUUID } from 'crypto';
 import { UsersService } from '../users/users.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 
+export interface ClubEventWithClubName {
+  id: string;
+  title: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  clubName: string;
+}
+
+export interface UserClubEventsResult {
+  message: string;
+  data: {
+    participatedEvents: {
+      past: ClubEventWithClubName[];
+      upcoming: ClubEventWithClubName[];
+    };
+    nonParticipatedEvents: ClubEventWithClubName[];
+  };
+}
+
 @Injectable()
 export class ClubsService {
   constructor(
@@ -600,5 +620,93 @@ export class ClubsService {
       relations: ['user', 'clubCity'],
       order: { createdAt: 'ASC' },
     });
+  }
+
+  async getUserClubEvents(userId: string): Promise<UserClubEventsResult> {
+    const clubMemberships = await this.clubMemberRepository.find({
+      where: {
+        userId,
+        status: MemberStatus.ACTIVE,
+      },
+      relations: [
+        'club',
+        'club.events',
+        'club.events.participants',
+        'club.events.participants.user',
+      ],
+    });
+
+    if (!clubMemberships || clubMemberships.length === 0) {
+      return {
+        message: 'User is not a member of any club',
+        data: {
+          participatedEvents: {
+            past: [],
+            upcoming: [],
+          },
+          nonParticipatedEvents: [],
+        },
+      };
+    }
+
+    const now = new Date();
+    const result: UserClubEventsResult = {
+      message: 'User club events retrieved successfully',
+      data: {
+        participatedEvents: {
+          past: [],
+          upcoming: [],
+        },
+        nonParticipatedEvents: [],
+      },
+    };
+
+    for (const membership of clubMemberships) {
+      const club = membership.club;
+
+      if (club.events) {
+        for (const event of club.events) {
+          const isParticipant = event.participants?.some(
+            (p) => p.user.id === userId,
+          );
+          const eventDate = new Date(event.startDate);
+
+          const eventWithClubName: ClubEventWithClubName = {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            clubName: club.name,
+          };
+
+          if (isParticipant) {
+            if (eventDate < now) {
+              result.data.participatedEvents.past.push(eventWithClubName);
+            } else {
+              result.data.participatedEvents.upcoming.push(eventWithClubName);
+            }
+          } else {
+            result.data.nonParticipatedEvents.push(eventWithClubName);
+          }
+        }
+      }
+    }
+
+    // Sort by date
+    result.data.participatedEvents.past.sort(
+      (a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+    );
+    result.data.participatedEvents.upcoming.sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
+    result.data.nonParticipatedEvents.sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
+
+    return result;
   }
 }

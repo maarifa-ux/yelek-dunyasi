@@ -24,6 +24,7 @@ import { AuthUser } from '../utils/decorators/auth-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { PaginationDto } from './dto/pagination.dto';
 import { Club } from './entities/club.entity';
+import { UserClubEventsResult } from './clubs.service';
 
 @ApiTags('Kulüpler')
 @Controller({
@@ -207,5 +208,17 @@ export class ClubsController {
   @ApiOperation({ summary: 'Kulüp şehirlerini listele' })
   getCities(@Param('id') clubId: string) {
     return this.clubsService.getCities(clubId);
+  }
+
+  @Get('user/:userId/events')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Kullanıcının katıldığı ve katılmadığı etkinlikleri listele',
+  })
+  getUserClubEvents(
+    @Param('userId') userId: string,
+  ): Promise<UserClubEventsResult> {
+    return this.clubsService.getUserClubEvents(userId);
   }
 }
