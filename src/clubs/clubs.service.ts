@@ -934,60 +934,75 @@ export class ClubsService {
     // Her başvuru için kullanıcının diğer kulüp üyeliklerini ve başvurularını al
     const enrichedApplications = await Promise.all(
       applications.map(async (application) => {
+        console.log('Checking memberships for userId:', application.userId);
+
         // Kullanıcının diğer kulüp üyeliklerini al
-        const otherMemberships = await this.clubMemberRepository
+        const otherMembershipsQuery = this.clubMemberRepository
           .createQueryBuilder('member')
-          .leftJoinAndSelect('member.club', 'club')
+          .innerJoin('member.club', 'club')
           .where('member.userId = :userId', { userId: application.userId })
           .andWhere('member.clubId != :currentClubId', {
             currentClubId: clubId,
           })
           .select([
-            'club.id as clubId',
-            'club.name as clubName',
-            'member.status as memberStatus',
-            'member.rank as memberRank',
-            'member.createdAt as joinDate',
-          ])
-          .getRawMany();
+            'club.id as "clubId"',
+            'club.name as "clubName"',
+            'member.status as "memberStatus"',
+            'member.rank as "memberRank"',
+            'member.createdAt as "joinDate"',
+          ]);
+
+        console.log('Other memberships query:', otherMembershipsQuery.getSql());
+        const otherMemberships = await otherMembershipsQuery.getRawMany();
+        console.log('Other memberships result:', otherMemberships);
 
         // Kullanıcının diğer kulüp başvurularını al
-        const otherApplications = await this.clubApplicationRepository
+        const otherApplicationsQuery = this.clubApplicationRepository
           .createQueryBuilder('app')
-          .leftJoinAndSelect('app.club', 'club')
+          .innerJoin('app.club', 'club')
           .where('app.userId = :userId', { userId: application.userId })
           .andWhere('app.clubId != :currentClubId', { currentClubId: clubId })
+          .andWhere('app.status = :status', {
+            status: ApplicationStatus.PENDING,
+          })
           .select([
-            'club.id as clubId',
-            'club.name as clubName',
-            'app.status as status',
-            'app.createdAt as applicationDate',
-          ])
-          .getRawMany();
+            'club.id as "clubId"',
+            'club.name as "clubName"',
+            'app.status as "status"',
+            'app.createdAt as "applicationDate"',
+          ]);
+
+        console.log(
+          'Other applications query:',
+          otherApplicationsQuery.getSql(),
+        );
+        const otherApplications = await otherApplicationsQuery.getRawMany();
+        console.log('Other applications result:', otherApplications);
 
         const enrichedApplication = {
           ...application,
           user: {
             ...application.user,
-            otherClubMemberships: otherMemberships.map(
-              (m): OtherClubMembership => ({
-                clubId: m.clubId,
-                clubName: m.clubName,
-                memberStatus: m.memberStatus,
-                memberRank: m.memberRank,
-                joinDate: m.joinDate,
-              }),
-            ),
-            otherClubApplications: otherApplications.map(
-              (a): OtherClubApplication => ({
-                clubId: a.clubId,
-                clubName: a.clubName,
-                status: a.status,
-                applicationDate: a.applicationDate,
-              }),
-            ),
+            otherClubMemberships: otherMemberships.map((m) => ({
+              clubId: m.clubId,
+              clubName: m.clubName,
+              memberStatus: m.memberStatus,
+              memberRank: m.memberRank,
+              joinDate: m.joinDate,
+            })),
+            otherClubApplications: otherApplications.map((a) => ({
+              clubId: a.clubId,
+              clubName: a.clubName,
+              status: a.status,
+              applicationDate: a.applicationDate,
+            })),
           },
         } as EnrichedClubApplication;
+
+        console.log(
+          'Enriched application:',
+          JSON.stringify(enrichedApplication, null, 2),
+        );
 
         return enrichedApplication;
       }),
