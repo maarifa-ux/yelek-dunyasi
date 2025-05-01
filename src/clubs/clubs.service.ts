@@ -35,6 +35,12 @@ import {
 } from './entities/club-application.entity';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { RespondApplicationDto } from './dto/respond-application.dto';
+import {
+  ClubApplicationsResponse,
+  EnrichedClubApplication,
+  OtherClubApplication,
+  OtherClubMembership,
+} from './interfaces/club-application.interface';
 
 export interface ClubEventWithClubName {
   id: string;
@@ -897,10 +903,7 @@ export class ClubsService {
     clubId: string,
     user: User,
     status?: ApplicationStatus,
-  ): Promise<ClubApplication[]> {
-    console.log('getClubApplications - User:', user);
-    console.log('getClubApplications - ClubId:', clubId);
-
+  ): Promise<ClubApplicationsResponse> {
     if (!user || !user.id) {
       throw new ForbiddenException('Kullanıcı bilgisi geçersiz');
     }
@@ -916,16 +919,81 @@ export class ClubsService {
     // Yetki kontrolü
     await this.checkMemberManagementPermission(club.id, user.id);
 
-    const query = this.clubApplicationRepository
+    // Ana başvuru sorgusunu oluştur
+    const applicationsQuery = this.clubApplicationRepository
       .createQueryBuilder('application')
       .leftJoinAndSelect('application.user', 'user')
       .where('application.clubId = :clubId', { clubId });
 
     if (status) {
-      query.andWhere('application.status = :status', { status });
+      applicationsQuery.andWhere('application.status = :status', { status });
     }
 
-    return query.getMany();
+    const applications = await applicationsQuery.getMany();
+
+    // Her başvuru için kullanıcının diğer kulüp üyeliklerini ve başvurularını al
+    const enrichedApplications = await Promise.all(
+      applications.map(async (application) => {
+        // Kullanıcının diğer kulüp üyeliklerini al
+        const otherMemberships = await this.clubMemberRepository
+          .createQueryBuilder('member')
+          .leftJoinAndSelect('member.club', 'club')
+          .where('member.userId = :userId', { userId: application.userId })
+          .andWhere('member.clubId != :currentClubId', {
+            currentClubId: clubId,
+          })
+          .select([
+            'club.id as clubId',
+            'club.name as clubName',
+            'member.status as memberStatus',
+            'member.rank as memberRank',
+            'member.createdAt as joinDate',
+          ])
+          .getRawMany();
+
+        // Kullanıcının diğer kulüp başvurularını al
+        const otherApplications = await this.clubApplicationRepository
+          .createQueryBuilder('app')
+          .leftJoinAndSelect('app.club', 'club')
+          .where('app.userId = :userId', { userId: application.userId })
+          .andWhere('app.clubId != :currentClubId', { currentClubId: clubId })
+          .select([
+            'club.id as clubId',
+            'club.name as clubName',
+            'app.status as status',
+            'app.createdAt as applicationDate',
+          ])
+          .getRawMany();
+
+        const enrichedApplication = {
+          ...application,
+          user: {
+            ...application.user,
+            otherClubMemberships: otherMemberships.map(
+              (m): OtherClubMembership => ({
+                clubId: m.clubId,
+                clubName: m.clubName,
+                memberStatus: m.memberStatus,
+                memberRank: m.memberRank,
+                joinDate: m.joinDate,
+              }),
+            ),
+            otherClubApplications: otherApplications.map(
+              (a): OtherClubApplication => ({
+                clubId: a.clubId,
+                clubName: a.clubName,
+                status: a.status,
+                applicationDate: a.applicationDate,
+              }),
+            ),
+          },
+        } as EnrichedClubApplication;
+
+        return enrichedApplication;
+      }),
+    );
+
+    return { applications: enrichedApplications };
   }
 
   async respondToApplication(
