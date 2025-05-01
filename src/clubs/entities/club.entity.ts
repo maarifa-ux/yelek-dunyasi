@@ -16,6 +16,7 @@ import { Announcement } from './announcement.entity';
 import { ClubCity } from './club-city.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { ClubNote } from './club-note.entity';
+import { ClubApplication } from './club-application.entity';
 
 export enum ClubType {
   PUBLIC = 'public',
@@ -28,7 +29,7 @@ export enum ClubStatus {
   INACTIVE = 'inactive',
 }
 
-@Entity()
+@Entity('club')
 export class Club {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -98,6 +99,9 @@ export class Club {
 
   @OneToMany(() => Subscription, (subscription) => subscription.club)
   subscriptions: Subscription[];
+
+  @OneToMany(() => ClubApplication, (application) => application.club)
+  applications: ClubApplication[];
 
   @CreateDateColumn()
   createdAt: Date;

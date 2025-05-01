@@ -186,6 +186,8 @@ export class ClubsService {
         'announcements.targetCity',
         'events',
         'cities',
+        'applications',
+        'applications.user',
       ],
     });
 
