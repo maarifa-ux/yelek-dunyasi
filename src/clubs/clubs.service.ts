@@ -29,6 +29,12 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { randomUUID } from 'crypto';
 import { UsersService } from '../users/users.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import {
+  ClubApplication,
+  ApplicationStatus,
+} from './entities/club-application.entity';
+import { CreateApplicationDto } from './dto/create-application.dto';
+import { RespondApplicationDto } from './dto/respond-application.dto';
 
 export interface ClubEventWithClubName {
   id: string;
@@ -100,6 +106,8 @@ export class ClubsService {
     private readonly clubNoteRepository: Repository<ClubNote>,
     @InjectRepository(ClubInvitation)
     private readonly clubInvitationRepository: Repository<ClubInvitation>,
+    @InjectRepository(ClubApplication)
+    private readonly clubApplicationRepository: Repository<ClubApplication>,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
   ) {}
@@ -221,11 +229,20 @@ export class ClubsService {
     clubId: string,
     addMemberDto: AddMemberDto,
     user: User,
+    skipPermissionCheck: boolean = false,
   ): Promise<ClubMember> {
-    const club = await this.findOne(clubId);
+    const club = await this.clubRepository.findOne({
+      where: { id: clubId },
+    });
 
-    // Yetki kontrolü
-    await this.checkMemberManagementPermission(club.id, user.id);
+    if (!club) {
+      throw new NotFoundException('Kulüp bulunamadı');
+    }
+
+    // Yetki kontrolü (skipPermissionCheck true ise atla)
+    if (!skipPermissionCheck) {
+      await this.checkMemberManagementPermission(club.id, user.id);
+    }
 
     const memberUser = await this.getUserById(addMemberDto.userId);
 
@@ -247,12 +264,18 @@ export class ClubsService {
       user: memberUser,
       userId: memberUser.id,
       rank: addMemberDto.rank || ClubRank.HANGAROUND,
-      status: MemberStatus.PENDING,
+      status: MemberStatus.ACTIVE,
       clubCity: addMemberDto.clubCityId
         ? { id: addMemberDto.clubCityId }
         : undefined,
       clubCityId: addMemberDto.clubCityId,
       hangaroundStartDate: new Date(),
+      canCreateEvent: false,
+      canManageMembers: false,
+      canManageClub: false,
+      canSendAnnouncement: false,
+      canAddProduct: false,
+      canRemoveMember: false,
     });
 
     await this.clubMemberRepository.save(clubMember);
@@ -782,5 +805,213 @@ export class ClubsService {
     );
 
     return result;
+  }
+
+  async applyToClub(
+    createApplicationDto: CreateApplicationDto,
+    user: User,
+  ): Promise<{ message: string; application?: ClubApplication }> {
+    console.log('Gelen DTO:', createApplicationDto);
+    console.log('Gelen User:', user);
+
+    if (!createApplicationDto?.clubId) {
+      throw new BadRequestException("Kulüp ID'si gereklidir");
+    }
+
+    const club = await this.clubRepository.findOne({
+      where: { id: createApplicationDto.clubId },
+    });
+
+    console.log('Bulunan Kulüp:', club);
+
+    if (!club) {
+      throw new NotFoundException('Kulüp bulunamadı');
+    }
+
+    if (!club.id) {
+      throw new BadRequestException('Geçersiz kulüp verisi');
+    }
+
+    // Kullanıcı zaten üye mi kontrol et
+    const existingMember = await this.clubMemberRepository.findOne({
+      where: {
+        clubId: club.id,
+        userId: user.id,
+      },
+    });
+
+    if (existingMember) {
+      throw new BadRequestException('Zaten bu kulübün üyesisiniz');
+    }
+
+    // Eğer kulüp private değilse direkt üye olarak ekle
+    if (club.type !== ClubType.PRIVATE) {
+      await this.addMember(
+        club.id,
+        {
+          userId: user.id,
+          rank: ClubRank.HANGAROUND,
+        },
+        user,
+        true, // skipPermissionCheck true olarak geçiyoruz
+      );
+
+      return {
+        message: 'Kulübe başarıyla katıldınız',
+      };
+    }
+
+    // Private kulüp için başvuru işlemleri
+    const existingApplication = await this.clubApplicationRepository.findOne({
+      where: {
+        clubId: club.id,
+        userId: user.id,
+        status: ApplicationStatus.PENDING,
+      },
+    });
+
+    if (existingApplication) {
+      throw new BadRequestException('Zaten bekleyen bir başvurunuz bulunmakta');
+    }
+
+    const application = this.clubApplicationRepository.create({
+      club,
+      clubId: club.id,
+      user,
+      userId: user.id,
+      applicationNote: createApplicationDto.applicationNote,
+      status: ApplicationStatus.PENDING,
+    });
+
+    await this.clubApplicationRepository.save(application);
+
+    return {
+      message: 'Başvurunuz başarıyla alındı',
+      application,
+    };
+  }
+
+  async getClubApplications(
+    clubId: string,
+    user: User,
+    status?: ApplicationStatus,
+  ): Promise<ClubApplication[]> {
+    console.log('getClubApplications - User:', user);
+    console.log('getClubApplications - ClubId:', clubId);
+
+    if (!user || !user.id) {
+      throw new ForbiddenException('Kullanıcı bilgisi geçersiz');
+    }
+
+    const club = await this.clubRepository.findOne({
+      where: { id: clubId },
+    });
+
+    if (!club) {
+      throw new NotFoundException('Kulüp bulunamadı');
+    }
+
+    // Yetki kontrolü
+    await this.checkMemberManagementPermission(club.id, user.id);
+
+    const query = this.clubApplicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.user', 'user')
+      .where('application.clubId = :clubId', { clubId });
+
+    if (status) {
+      query.andWhere('application.status = :status', { status });
+    }
+
+    return query.getMany();
+  }
+
+  async respondToApplication(
+    applicationId: string,
+    respondDto: RespondApplicationDto,
+    user: User,
+  ): Promise<ClubApplication> {
+    console.log('respondToApplication - User:', user);
+    console.log('respondToApplication - ApplicationId:', applicationId);
+    console.log('respondToApplication - RespondDto:', respondDto);
+
+    if (!user || !user.id) {
+      throw new ForbiddenException('Kullanıcı bilgisi geçersiz');
+    }
+
+    const application = await this.clubApplicationRepository.findOne({
+      where: { id: applicationId },
+      relations: ['club', 'user'],
+    });
+
+    if (!application) {
+      throw new NotFoundException('Başvuru bulunamadı');
+    }
+
+    if (!application.clubId) {
+      throw new BadRequestException('Başvuru bilgileri geçersiz');
+    }
+
+    // Yetki kontrolü
+    await this.checkMemberManagementPermission(application.clubId, user.id);
+
+    // Başvuru zaten sonuçlandırılmış mı kontrol et
+    if (application.status !== ApplicationStatus.PENDING) {
+      throw new BadRequestException('Bu başvuru zaten sonuçlandırılmış');
+    }
+
+    application.status = respondDto.status;
+    application.responseNote = respondDto.responseNote || null;
+
+    await this.clubApplicationRepository.save(application);
+
+    // Eğer başvuru onaylandıysa, kullanıcıyı kulübe ekle
+    if (respondDto.status === ApplicationStatus.APPROVED) {
+      await this.addMember(
+        application.clubId,
+        {
+          userId: application.userId,
+          rank: ClubRank.HANGAROUND,
+        },
+        user,
+        true, // skipPermissionCheck
+      );
+
+      // Bildirim gönder
+      await this.notificationsService.sendToRecipients(
+        [{ userId: application.userId }],
+        `${application.club.name} - Başvuru Onaylandı`,
+        'Kulüp başvurunuz onaylandı. Artık kulübün bir üyesisiniz!',
+        NotificationType.PUSH,
+        { clubId: application.clubId },
+      );
+    } else if (respondDto.status === ApplicationStatus.REJECTED) {
+      // Red durumunda bildirim gönder
+      await this.notificationsService.sendToRecipients(
+        [{ userId: application.userId }],
+        `${application.club.name} - Başvuru Reddedildi`,
+        'Kulüp başvurunuz reddedildi.',
+        NotificationType.PUSH,
+        { clubId: application.clubId },
+      );
+    }
+
+    return application;
+  }
+
+  async getUserApplications(
+    userId: string,
+    status?: ApplicationStatus,
+  ): Promise<ClubApplication[]> {
+    const query = this.clubApplicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.club', 'club')
+      .where('application.userId = :userId', { userId });
+
+    if (status) {
+      query.andWhere('application.status = :status', { status });
+    }
+
+    return query.getMany();
   }
 }

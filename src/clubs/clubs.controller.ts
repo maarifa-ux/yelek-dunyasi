@@ -25,6 +25,9 @@ import { User } from '../users/entities/user.entity';
 import { PaginationDto } from './dto/pagination.dto';
 import { Club } from './entities/club.entity';
 import { UserClubEventsResult } from './clubs.service';
+import { CreateApplicationDto } from './dto/create-application.dto';
+import { RespondApplicationDto } from './dto/respond-application.dto';
+import { ApplicationStatus } from './entities/club-application.entity';
 
 @ApiTags('Kulüpler')
 @Controller({
@@ -220,5 +223,51 @@ export class ClubsController {
     @Param('userId') userId: string,
   ): Promise<UserClubEventsResult> {
     return this.clubsService.getUserClubEvents(userId);
+  }
+
+  @Post('apply')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Kulübe başvuru yap' })
+  async applyToClub(
+    @Body() createApplicationDto: CreateApplicationDto,
+    @AuthUser() user: User,
+  ) {
+    console.log('Controller - Gelen User:', user);
+    return this.clubsService.applyToClub(createApplicationDto, user);
+  }
+
+  @Get(':clubId/applications')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Kulüp başvurularını listele' })
+  async getClubApplications(
+    @Param('clubId') clubId: string,
+    @AuthUser() user: User,
+    @Query('status') status?: ApplicationStatus,
+  ) {
+    console.log('Controller - User:', user);
+    return this.clubsService.getClubApplications(clubId, user, status);
+  }
+
+  @Patch('applications/:id/respond')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Kulüp başvurusunu yanıtla' })
+  async respondToApplication(
+    @Param('id') id: string,
+    @Body() respondDto: RespondApplicationDto,
+    @AuthUser() user: User,
+  ) {
+    console.log('Controller - User:', user);
+    return this.clubsService.respondToApplication(id, respondDto, user);
+  }
+
+  @Get('applications/user/:userId')
+  async getUserApplications(
+    @Param('userId') userId: string,
+    @Query('status') status?: ApplicationStatus,
+  ) {
+    return this.clubsService.getUserApplications(userId, status);
   }
 }
