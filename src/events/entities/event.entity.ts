@@ -82,8 +82,8 @@ export class Event {
   @Column({ type: 'timestamp' })
   endDate: Date;
 
-  @Column()
-  startLocation: string;
+  @Column({ name: 'location_name' })
+  locationName: string;
 
   @Column('decimal', { precision: 10, scale: 8 })
   latitude: number;
@@ -91,13 +91,13 @@ export class Event {
   @Column('decimal', { precision: 11, scale: 8 })
   longitude: number;
 
-  @Column()
+  @Column({ name: 'destination_location_name' })
   destinationLocationName: string;
 
-  @Column('decimal', { precision: 10, scale: 8 })
+  @Column('decimal', { precision: 10, scale: 8, name: 'destination_latitude' })
   destinationLatitude: number;
 
-  @Column('decimal', { precision: 11, scale: 8 })
+  @Column('decimal', { precision: 11, scale: 8, name: 'destination_longitude' })
   destinationLongitude: number;
 
   @Column('jsonb', { nullable: true })
@@ -108,10 +108,10 @@ export class Event {
     description?: string;
   }[];
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'max_participants' })
   maxParticipants: number;
 
-  @Column({ default: false })
+  @Column({ default: false, name: 'is_private' })
   isPrivate: boolean;
 
   @Column('text', { array: true, nullable: true })
@@ -141,7 +141,7 @@ export class Event {
   @Column('decimal', { precision: 10, scale: 2 })
   distance: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'travel_link' })
   travelLink: string;
 
   @Column('text', { array: true, nullable: true })
