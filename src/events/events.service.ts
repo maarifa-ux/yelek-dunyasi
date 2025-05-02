@@ -65,6 +65,7 @@ export class EventsService {
       creatorId: user.id,
       club: club,
       clubId: club.id,
+      status: EventStatus.DRAFT,
     });
 
     await this.eventRepository.save(event);
@@ -79,28 +80,47 @@ export class EventsService {
       }),
     );
 
-    // Etkinliğe otomatik olarak START ve END kontrol noktaları ekle
+    // Başlangıç ve bitiş kontrol noktalarını ekle
     const startCheckpoint = this.eventCheckpointRepository.create({
-      name: 'Başlangıç Noktası',
+      name: event.locationName,
       type: CheckpointType.START,
       orderIndex: 0,
-      address: createEventDto.locationName,
-      latitude: createEventDto.latitude,
-      longitude: createEventDto.longitude,
+      address: event.locationName,
+      latitude: event.latitude,
+      longitude: event.longitude,
       event: event,
     });
 
     const endCheckpoint = this.eventCheckpointRepository.create({
-      name: 'Bitiş Noktası',
+      name: event.destinationLocationName,
       type: CheckpointType.END,
-      orderIndex: 1,
-      address: createEventDto.locationName,
-      latitude: createEventDto.latitude,
-      longitude: createEventDto.longitude,
+      orderIndex: event.waypoints?.length ? event.waypoints.length + 1 : 1,
+      address: event.destinationLocationName,
+      latitude: event.destinationLatitude,
+      longitude: event.destinationLongitude,
       event: event,
     });
 
-    await this.eventCheckpointRepository.save([startCheckpoint, endCheckpoint]);
+    const checkpoints = [startCheckpoint, endCheckpoint];
+
+    // Ara noktaları ekle
+    if (event.waypoints?.length) {
+      const waypointCheckpoints = event.waypoints.map((waypoint, index) =>
+        this.eventCheckpointRepository.create({
+          name: waypoint.name,
+          type: CheckpointType.WAYPOINT,
+          orderIndex: index + 1,
+          address: waypoint.name,
+          latitude: waypoint.latitude,
+          longitude: waypoint.longitude,
+          description: waypoint.description,
+          event: event,
+        }),
+      );
+      checkpoints.push(...waypointCheckpoints);
+    }
+
+    await this.eventCheckpointRepository.save(checkpoints);
 
     // Etkinliği bildirim olarak gönder
     this.sendEventNotification(event);

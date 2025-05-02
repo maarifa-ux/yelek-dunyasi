@@ -15,24 +15,33 @@ import { EventCheckpoint } from './event-checkpoint.entity';
 import { ClubCity } from '../../clubs/entities/club-city.entity';
 
 export enum EventType {
+  TRAINING = 'training',
+  RACE = 'race',
+  SOCIAL = 'social',
+  OTHER = 'other',
   RIDE = 'ride',
   MEETING = 'meeting',
   FESTIVAL = 'festival',
-  TRAINING = 'training',
-  OTHER = 'other',
 }
 
 export enum EventScope {
   CLUB = 'club',
-  CITY = 'city',
   PUBLIC = 'public',
 }
 
 export enum EventStatus {
-  PLANNED = 'planned',
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
   ONGOING = 'ongoing',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+}
+
+export enum TargetRank {
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+  EXPERT = 'expert',
 }
 
 @Entity('events')
@@ -46,31 +55,10 @@ export class Event {
   @Column('text')
   description: string;
 
-  @ManyToOne(() => Club)
-  @JoinColumn({ name: 'clubId' })
-  club: Club;
-
-  @Column({ nullable: false })
-  clubId: string;
-
-  @ManyToOne(() => ClubCity, { nullable: true })
-  @JoinColumn()
-  clubCity: ClubCity;
-
-  @Column({ nullable: true })
-  clubCityId: string;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'creatorId' })
-  creator: User;
-
-  @Column({ nullable: false })
-  creatorId: string;
-
   @Column({
     type: 'enum',
     enum: EventType,
-    default: EventType.RIDE,
+    default: EventType.OTHER,
   })
   type: EventType;
 
@@ -84,51 +72,86 @@ export class Event {
   @Column({
     type: 'enum',
     enum: EventStatus,
-    default: EventStatus.PLANNED,
+    default: EventStatus.DRAFT,
   })
   status: EventStatus;
 
   @Column({ type: 'timestamp' })
   startDate: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp' })
   endDate: Date;
 
   @Column()
   startLocation: string;
 
-  @Column()
-  startLocationLatitude: number;
+  @Column('decimal', { precision: 10, scale: 8 })
+  latitude: number;
+
+  @Column('decimal', { precision: 11, scale: 8 })
+  longitude: number;
 
   @Column()
-  startLocationLongitude: number;
+  destinationLocationName: string;
+
+  @Column('decimal', { precision: 10, scale: 8 })
+  destinationLatitude: number;
+
+  @Column('decimal', { precision: 11, scale: 8 })
+  destinationLongitude: number;
+
+  @Column('jsonb', { nullable: true })
+  waypoints: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    description?: string;
+  }[];
 
   @Column({ nullable: true })
-  endLocation: string;
-
-  @Column({ nullable: true })
-  endLocationLatitude: number;
-
-  @Column({ nullable: true })
-  endLocationLongitude: number;
-
-  @Column({ nullable: true })
-  totalDistance: number;
+  maxParticipants: number;
 
   @Column({ default: false })
-  isManualDistanceCalculation: boolean;
+  isPrivate: boolean;
+
+  @Column('text', { array: true, nullable: true })
+  tags: string[];
+
+  @ManyToOne(() => Club, (club) => club.events)
+  @JoinColumn({ name: 'clubId' })
+  club: Club;
+
+  @Column()
+  clubId: string;
+
+  @ManyToOne(() => ClubCity, { nullable: true })
+  @JoinColumn({ name: 'clubCityId' })
+  clubCity: ClubCity;
 
   @Column({ nullable: true })
-  capacity: number;
+  clubCityId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'creatorId' })
+  creator: User;
+
+  @Column()
+  creatorId: string;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  distance: number;
+
+  @Column({ nullable: true })
+  travelLink: string;
+
+  @Column('text', { array: true, nullable: true })
+  targetRanks: TargetRank[];
 
   @Column({ default: 0 })
   participantCount: number;
 
   @Column({ default: 0 })
   confirmedParticipantCount: number;
-
-  @Column('simple-array', { nullable: true })
-  targetRanks: string[];
 
   @OneToMany(() => EventParticipant, (participant) => participant.event)
   participants: EventParticipant[];

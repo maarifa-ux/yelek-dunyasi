@@ -38,8 +38,6 @@ import { RespondApplicationDto } from './dto/respond-application.dto';
 import {
   ClubApplicationsResponse,
   EnrichedClubApplication,
-  OtherClubApplication,
-  OtherClubMembership,
 } from './interfaces/club-application.interface';
 
 export interface ClubEventWithClubName {
@@ -49,16 +47,27 @@ export interface ClubEventWithClubName {
   startDate: Date;
   endDate: Date;
   clubName: string;
-  startLocation: string;
-  startLocationLatitude: number;
-  startLocationLongitude: number;
-  endLocation: string | null;
-  endLocationLatitude: number | null;
-  endLocationLongitude: number | null;
+  locationName: string;
+  latitude: number;
+  longitude: number;
+  destinationLocationName: string;
+  destinationLatitude: number;
+  destinationLongitude: number;
+  waypoints?: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    description?: string;
+  }[];
   maxParticipants: number;
   currentParticipants: number;
   status: string;
   type: string;
+  isPrivate: boolean;
+  tags?: string[];
+  distance: number;
+  travelLink?: string;
+  targetRanks?: string[];
   creator: {
     id: string;
     fullName: string;
@@ -739,22 +748,36 @@ export class ClubsService {
           const isParticipant = participants.some((p) => p.user.id === userId);
           const eventDate = new Date(event.startDate);
 
+          // City bilgisini al
+          const city = event.clubCityId
+            ? await this.clubCityRepository.findOne({
+                where: { id: event.clubCityId },
+                relations: ['city'],
+              })
+            : null;
+
           const eventWithClubName: ClubEventWithClubName = {
             id: event.id,
             title: event.title,
             description: event.description,
             startDate: event.startDate,
             endDate: event.endDate,
-            startLocation: event.startLocation,
-            startLocationLatitude: event.startLocationLatitude,
-            startLocationLongitude: event.startLocationLongitude,
-            endLocation: event.endLocation,
-            endLocationLatitude: event.endLocationLatitude,
-            endLocationLongitude: event.endLocationLongitude,
-            maxParticipants: event.capacity || 0,
+            locationName: event.locationName,
+            latitude: event.latitude,
+            longitude: event.longitude,
+            destinationLocationName: event.destinationLocationName,
+            destinationLatitude: event.destinationLatitude,
+            destinationLongitude: event.destinationLongitude,
+            waypoints: event.waypoints,
+            maxParticipants: event.maxParticipants || 0,
             currentParticipants: event.participantCount,
             status: event.status,
             type: event.type,
+            isPrivate: event.isPrivate,
+            tags: event.tags,
+            distance: event.distance,
+            travelLink: event.travelLink,
+            targetRanks: event.targetRanks,
             clubName: club.name,
             creator: {
               id: event.creator.id,
@@ -770,10 +793,10 @@ export class ClubsService {
               joinDate: p.createdAt,
               status: p.status,
             })),
-            city: event.clubCity
+            city: city
               ? {
-                  id: event.clubCity.id,
-                  name: event.clubCity.city?.name,
+                  id: city.id,
+                  name: city.city?.name || '',
                 }
               : null,
             club: {
