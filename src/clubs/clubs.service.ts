@@ -413,7 +413,11 @@ export class ClubsService {
     await this.announcementRepository.save(announcement);
 
     // Bildirim gönder
-    this.sendAnnouncementNotification(club, announcement);
+    this.sendAnnouncementNotification(
+      club,
+      announcement,
+      createAnnouncementDto.priority || '',
+    );
 
     return announcement;
   }
@@ -633,6 +637,7 @@ export class ClubsService {
   private async sendAnnouncementNotification(
     club: Club,
     announcement: Announcement,
+    priority: string,
   ): Promise<void> {
     // Kulüp üyelerini bul
     const members = await this.clubMemberRepository.find({
@@ -649,7 +654,13 @@ export class ClubsService {
       // Bildirim gönder
       await this.notificationsService.sendToRecipients(
         recipients,
-        `${club.name} - Yeni Duyuru`,
+        `${club.name} - Yeni Duyuru ${
+          priority == 'NORMAL'
+            ? 'ℹ️ Bilgilendirme'
+            : priority == 'YUKSEK'
+            ? '⚠️ Uyarı!'
+            : '🚨 ACİL!'
+        }`,
         announcement.content,
         NotificationType.PUSH,
         { announcementId: announcement.id, clubId: club.id },
