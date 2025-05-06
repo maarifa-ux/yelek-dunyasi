@@ -52,6 +52,7 @@ export class OneSignalService {
       data: Record<string, string | number | boolean | object>;
       large_icon?: string;
       big_picture?: string;
+      android_channel_id?: string;
     } = {
       app_id: this.appId,
       filters: [],
@@ -75,6 +76,8 @@ export class OneSignalService {
     if (bigPicture) {
       requestBody.big_picture = bigPicture;
     }
+
+    requestBody.android_channel_id = '00988638-3652-4759-ba4b-6885fdea1bc9';
 
     try {
       const response = await axios.post(
