@@ -550,7 +550,20 @@ export class EventsService {
     }));
 
     if (recipients.length > 0) {
+      console.log('recipients', recipients);
       // Bildirim gönder
+      console.log(
+        recipients,
+        `Yeni Etkinlik: ${event.title}`,
+        `${event.club.name} kulübünde yeni bir etkinlik oluşturuldu: ${
+          event.title
+        }. 
+         Etkinlik ${new Date(event.startDate).toLocaleDateString(
+           'tr-TR',
+         )} tarihinde başlayacak.`,
+        NotificationType.PUSH,
+        { eventId: event.id, clubId: event.clubId },
+      );
       await this.notificationsService.sendToRecipients(
         recipients,
         `Yeni Etkinlik: ${event.title}`,
@@ -562,6 +575,8 @@ export class EventsService {
          )} tarihinde başlayacak.`,
         NotificationType.PUSH,
         { eventId: event.id, clubId: event.clubId },
+        event.club.logo,
+        event.club.logo,
       );
     }
   }

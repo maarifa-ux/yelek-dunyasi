@@ -28,6 +28,8 @@ export class NotificationsService {
     message: string,
     type: NotificationType = NotificationType.PUSH,
     data?: Record<string, string | number | boolean | object>,
+    largeIcon?: string,
+    bigPicture?: string,
   ): Promise<boolean> {
     let success = true;
 
@@ -38,15 +40,14 @@ export class NotificationsService {
 
         if (user) {
           if (type === NotificationType.PUSH || type === NotificationType.ALL) {
-            const devices = await this.getUserDevices(user.id);
-            const playerIds = devices.map((device) => device.token);
-
-            if (playerIds.length) {
+            if (user.oneSignalPlayerId) {
               const result = await this.oneSignalService.sendNotification(
-                playerIds,
+                [user.oneSignalPlayerId],
                 title,
                 message,
                 data,
+                largeIcon,
+                bigPicture,
               );
               success = success && result;
             }
@@ -99,6 +100,8 @@ export class NotificationsService {
           title,
           message,
           data,
+          largeIcon,
+          bigPicture,
         );
         success = success && result;
       }
@@ -207,6 +210,8 @@ export class NotificationsService {
     message: string,
     type: NotificationType = NotificationType.PUSH,
     data?: Record<string, string | number | boolean | object>,
+    largeIcon?: string,
+    bigPicture?: string,
   ): Promise<boolean> {
     try {
       const user = await this.usersService.findOne({ id: userId });
@@ -217,17 +222,16 @@ export class NotificationsService {
       let success = true;
 
       if (type === NotificationType.PUSH || type === NotificationType.ALL) {
-        const devices = await this.getUserDevices(userId);
-        const playerIds = devices.map((device) => device.token);
-
-        if (playerIds.length) {
-          const pushSuccess = await this.oneSignalService.sendNotification(
-            playerIds,
+        if (user.oneSignalPlayerId) {
+          const result = await this.oneSignalService.sendNotification(
+            [user.oneSignalPlayerId],
             title,
             message,
             data,
+            largeIcon,
+            bigPicture,
           );
-          success = success && pushSuccess;
+          success = success && result;
         }
       }
 
@@ -270,6 +274,8 @@ export class NotificationsService {
     message: string,
     type: NotificationType = NotificationType.PUSH,
     data?: Record<string, string | number | boolean | object>,
+    largeIcon?: string,
+    bigPicture?: string,
   ): Promise<boolean> {
     try {
       if (!userIds.length) {
@@ -279,12 +285,13 @@ export class NotificationsService {
       let success = true;
 
       if (type === NotificationType.PUSH || type === NotificationType.ALL) {
-        // Tüm kullanıcıların cihazlarını topla
         const playerIdsSet = new Set<string>();
+        const usersForPush = await this.usersService.findByIds(userIds);
 
-        for (const userId of userIds) {
-          const devices = await this.getUserDevices(userId);
-          devices.forEach((device) => playerIdsSet.add(device.token));
+        for (const user of usersForPush) {
+          if (user.oneSignalPlayerId) {
+            playerIdsSet.add(user.oneSignalPlayerId);
+          }
         }
 
         const playerIds = Array.from(playerIdsSet);
@@ -295,6 +302,8 @@ export class NotificationsService {
             title,
             message,
             data,
+            largeIcon,
+            bigPicture,
           );
           success = success && pushSuccess;
         }

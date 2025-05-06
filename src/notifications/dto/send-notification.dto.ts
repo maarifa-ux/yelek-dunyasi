@@ -65,4 +65,14 @@ export class SendNotificationDto {
   @IsObject()
   @IsOptional()
   data?: Record<string, string | number | boolean | object>;
+
+  @ApiProperty({ description: 'Büyük ikon URL', required: false })
+  @IsString()
+  @IsOptional()
+  largeIcon?: string;
+
+  @ApiProperty({ description: 'Büyük resim URL', required: false })
+  @IsString()
+  @IsOptional()
+  bigPicture?: string;
 }

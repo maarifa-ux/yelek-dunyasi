@@ -15,9 +15,10 @@ export class OneSignalService {
     this.restApiKey = this.configService.getOrThrow('oneSignal.restApiKey', {
       infer: true,
     });
-    this.apiUrl = this.configService.getOrThrow('oneSignal.apiUrl', {
-      infer: true,
-    });
+    this.apiUrl =
+      this.configService.getOrThrow('oneSignal.apiUrl', {
+        infer: true,
+      }) || 'https://onesignal.com/api/v1/notifications';
   }
 
   async sendNotification(
@@ -25,21 +26,60 @@ export class OneSignalService {
     title: string,
     message: string,
     data?: Record<string, string | number | boolean | object>,
+    largeIcon?: string,
+    bigPicture?: string,
   ): Promise<boolean> {
-    if (!playerIds.length) {
+    if (!playerIds || playerIds.length === 0) {
+      console.warn(
+        'OneSignal playerIds boş olduğu için bildirim gönderilmedi.',
+      );
       return false;
+    }
+
+    interface OneSignalFilter {
+      field?: 'tag';
+      key?: string;
+      relation?: string;
+      value?: string;
+      operator?: 'OR';
+    }
+
+    const requestBody: {
+      app_id: string;
+      filters: OneSignalFilter[];
+      headings: { [key: string]: string };
+      contents: { [key: string]: string };
+      data: Record<string, string | number | boolean | object>;
+      large_icon?: string;
+      big_picture?: string;
+    } = {
+      app_id: this.appId,
+      filters: [],
+      headings: { tr: title, en: title },
+      contents: { tr: message, en: message },
+      data: data || {},
+    };
+
+    const filters: OneSignalFilter[] = [];
+    playerIds.forEach((id, index) => {
+      if (index > 0) {
+        filters.push({ operator: 'OR' });
+      }
+      filters.push({ field: 'tag', key: 'deviceId', relation: '=', value: id });
+    });
+    requestBody.filters = filters;
+
+    if (largeIcon) {
+      requestBody.large_icon = largeIcon;
+    }
+    if (bigPicture) {
+      requestBody.big_picture = bigPicture;
     }
 
     try {
       const response = await axios.post(
-        `${this.apiUrl}/notifications`,
-        {
-          app_id: this.appId,
-          include_player_ids: playerIds,
-          headings: { tr: title, en: title },
-          contents: { tr: message, en: message },
-          data,
-        },
+        'https://onesignal.com/api/v1/notifications',
+        requestBody,
         {
           headers: {
             'Content-Type': 'application/json',

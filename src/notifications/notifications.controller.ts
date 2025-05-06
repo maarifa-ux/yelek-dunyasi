@@ -25,6 +25,8 @@ export class NotificationsController {
       sendNotificationDto.message,
       sendNotificationDto.type,
       sendNotificationDto.data,
+      sendNotificationDto.largeIcon,
+      sendNotificationDto.bigPicture,
     );
   }
 

@@ -39,6 +39,7 @@ import {
   ClubApplicationsResponse,
   EnrichedClubApplication,
 } from './interfaces/club-application.interface';
+import { In } from 'typeorm';
 
 export interface ClubEventWithClubName {
   id: string;
@@ -652,6 +653,8 @@ export class ClubsService {
         announcement.content,
         NotificationType.PUSH,
         { announcementId: announcement.id, clubId: club.id },
+        club.logo,
+        club.logo,
       );
     }
   }
@@ -840,11 +843,14 @@ export class ClubsService {
 
   async applyToClub(
     createApplicationDto: CreateApplicationDto,
-    user: User,
+    userAuth: User,
   ): Promise<{ message: string; application?: ClubApplication }> {
     console.log('Gelen DTO:', createApplicationDto);
-    console.log('Gelen User:', user);
-
+    console.log('Gelen User:', userAuth);
+    const user = await this.usersService.findOne({ id: userAuth.id });
+    if (!user) {
+      throw new NotFoundException('Başvuran kullanıcı bulunamadı.');
+    }
     if (!createApplicationDto?.clubId) {
       throw new BadRequestException("Kulüp ID'si gereklidir");
     }
@@ -867,7 +873,7 @@ export class ClubsService {
     const existingMember = await this.clubMemberRepository.findOne({
       where: {
         clubId: club.id,
-        userId: user.id,
+        userId: user?.id,
       },
     });
 
@@ -880,10 +886,10 @@ export class ClubsService {
       await this.addMember(
         club.id,
         {
-          userId: user.id,
+          userId: user?.id || '',
           rank: ClubRank.HANGAROUND,
         },
-        user,
+        user || userAuth,
         true, // skipPermissionCheck true olarak geçiyoruz
       );
 
@@ -896,7 +902,7 @@ export class ClubsService {
     const existingApplication = await this.clubApplicationRepository.findOne({
       where: {
         clubId: club.id,
-        userId: user.id,
+        userId: user?.id,
         status: ApplicationStatus.PENDING,
       },
     });
@@ -909,12 +915,68 @@ export class ClubsService {
       club,
       clubId: club.id,
       user,
-      userId: user.id,
+      userId: user?.id,
       applicationNote: createApplicationDto.applicationNote,
       status: ApplicationStatus.PENDING,
     });
 
     await this.clubApplicationRepository.save(application);
+
+    // Şehir Başkanı ve Şehir Koçuna bildirim gönder
+    try {
+      const clubForNotification = await this.clubRepository.findOne({
+        where: { id: createApplicationDto.clubId },
+      });
+
+      if (clubForNotification && user) {
+        const targetRanks = [ClubRank.CITY_PRESIDENT, ClubRank.CITY_COACH];
+        const membersToNotify = await this.clubMemberRepository.find({
+          where: {
+            clubId: createApplicationDto.clubId,
+            rank: In(targetRanks), // In operatörü için typeorm importu gerekebilir
+            status: MemberStatus.ACTIVE,
+          },
+          relations: ['user'], // User ilişkisini yükle
+        });
+        console.log(user);
+        for (const member of membersToNotify) {
+          if (member.user && member.user.oneSignalPlayerId) {
+            const applicantName =
+              user.fullName ||
+              `${user.firstName} ${user.lastName}`.trim() ||
+              'Bir kullanıcı';
+            const clubName = clubForNotification.name;
+            const rankTurkish =
+              member.rank === ClubRank.CITY_PRESIDENT
+                ? 'Şehir Başkanı'
+                : 'Şehir Koçu';
+
+            const notificationTitle = `${rankTurkish} olarak üyesi olduğunuz ${clubName}'e Başvuru Geldi`;
+            const notificationMessage = `${applicantName} isimli bir kişiden başvuru geldi.`;
+
+            await this.notificationsService.sendNotificationToUser(
+              member.userId, // veya member.user.id
+              notificationTitle,
+              notificationMessage,
+              NotificationType.PUSH,
+              {
+                applicationId: application.id,
+                clubId: clubForNotification.id,
+                applicantUserId: user.id,
+              },
+              club.logo,
+              club.logo,
+            );
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error(
+        'Kulüp başvurusu sonrası yetkililere bildirim gönderirken hata oluştu:',
+        notificationError,
+      );
+      // Bildirim hatası ana işlemi etkilememeli
+    }
 
     return {
       message: 'Başvurunuz başarıyla alındı',
@@ -1085,23 +1147,35 @@ export class ClubsService {
         true, // skipPermissionCheck
       );
 
-      // Bildirim gönder
-      await this.notificationsService.sendToRecipients(
-        [{ userId: application.userId }],
-        `${application.club.name} - Başvuru Onaylandı`,
-        'Kulüp başvurunuz onaylandı. Artık kulübün bir üyesisiniz!',
-        NotificationType.PUSH,
-        { clubId: application.clubId },
-      );
+      // Başvuru sahibine bildirim gönder
+      if (application.user && application.user.oneSignalPlayerId) {
+        const notificationTitle = `${application.club.name} - Başvuru Onaylandı`;
+        const notificationMessage = `${application.club.name} adlı kulübe yaptığınız başvuru onaylandı. Artık kulübün bir üyesisiniz!`;
+        await this.notificationsService.sendNotificationToUser(
+          application.userId,
+          notificationTitle,
+          notificationMessage,
+          NotificationType.PUSH,
+          { clubId: application.clubId, applicationId: application.id },
+          application.club.logo, // largeIcon
+          application.club.logo, // bigPicture
+        );
+      }
     } else if (respondDto.status === ApplicationStatus.REJECTED) {
-      // Red durumunda bildirim gönder
-      await this.notificationsService.sendToRecipients(
-        [{ userId: application.userId }],
-        `${application.club.name} - Başvuru Reddedildi`,
-        'Kulüp başvurunuz reddedildi.',
-        NotificationType.PUSH,
-        { clubId: application.clubId },
-      );
+      // Başvuru sahibine red bildirim gönder
+      if (application.user && application.user.oneSignalPlayerId) {
+        const notificationTitle = `${application.club.name} - Başvuru Reddedildi`;
+        const notificationMessage = `${application.club.name} adlı kulübe yaptığınız başvuru reddedildi.`;
+        await this.notificationsService.sendNotificationToUser(
+          application.userId,
+          notificationTitle,
+          notificationMessage,
+          NotificationType.PUSH,
+          { clubId: application.clubId, applicationId: application.id },
+          application.club.logo, // largeIcon
+          application.club.logo, // bigPicture
+        );
+      }
     }
 
     return application;
