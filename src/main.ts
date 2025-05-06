@@ -14,12 +14,11 @@ import { HttpExceptionFilter } from './filter/exception.filter';
 import { ManipulationInterceptor } from './interceptor/manipulation.interceptor';
 import validationOptions from './utils/validation-options';
 import { writeFileSync } from 'fs';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    cors: true,
-    bodyParser: true,
-  });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   const configService = app.get(ConfigService<AllConfigType>);
 
@@ -41,6 +40,10 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  app.enableCors();
+
+  app.useStaticAssets(join(__dirname, '..', 'public'));
+
   const options = new DocumentBuilder()
     .setTitle('API')
     .setDescription('API docs')
@@ -52,6 +55,8 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
   writeFileSync('./swagger-spec.json', JSON.stringify(document));
 
-  await app.listen(configService.getOrThrow('app.port', { infer: true }));
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`Uygulama çalışıyor: http://localhost:${port}`);
 }
 void bootstrap();

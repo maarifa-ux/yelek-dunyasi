@@ -41,6 +41,7 @@ import { ClubRoleSetting } from 'src/clubs/entities/club-role-setting.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from 'src/events/entities/event.entity';
+import { Express } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -509,67 +510,69 @@ export class AuthService {
   async update(
     userJwtPayload: JwtPayloadType,
     userDto: AuthUpdateDto,
+    uploadedPhotoFile?: Express.Multer.File,
   ): Promise<NullableType<User>> {
-    if (userDto.password) {
-      if (userDto.oldPassword) {
-        const currentUser = await this.usersService.findOne({
-          id: userJwtPayload.id,
-        });
+    const updatePayload: Partial<User> = {};
 
-        if (!currentUser) {
-          throw new HttpException(
-            {
-              status: HttpStatus.UNPROCESSABLE_ENTITY,
-              errors: {
-                user: 'userNotFound',
-              },
-            },
-            HttpStatus.UNPROCESSABLE_ENTITY,
-          );
-        }
-
-        const isValidOldPassword = await bcrypt.compare(
-          userDto.oldPassword,
-          currentUser.password,
-        );
-
-        if (!isValidOldPassword) {
-          throw new HttpException(
-            {
-              status: HttpStatus.UNPROCESSABLE_ENTITY,
-              errors: {
-                oldPassword: 'incorrectOldPassword',
-              },
-            },
-            HttpStatus.UNPROCESSABLE_ENTITY,
-          );
-        } else {
-          await this.sessionService.softDelete({
-            user: {
-              id: currentUser.id,
-            },
-            excludeId: userJwtPayload.sessionId,
-          });
-        }
-      } else {
-        throw new HttpException(
-          {
-            status: HttpStatus.UNPROCESSABLE_ENTITY,
-            errors: {
-              oldPassword: 'missingOldPassword',
-            },
-          },
-          HttpStatus.UNPROCESSABLE_ENTITY,
-        );
+    for (const key in userDto) {
+      if (Object.prototype.hasOwnProperty.call(userDto, key)) {
+        const value = userDto[key];
+        updatePayload[key] = value === null ? undefined : value;
       }
     }
 
-    await this.usersService.update(userJwtPayload.id, userDto);
+    if (uploadedPhotoFile) {
+      const appUrl = process.env.APP_URL;
+      if (!appUrl) {
+        console.warn(
+          'APP_URL ortam değişkeni tanımlı değil. profilePicture göreceli yol olacak.',
+        );
+        updatePayload.profilePicture = `/uploads/profile-pictures/${uploadedPhotoFile.filename}`;
+      } else {
+        updatePayload.profilePicture = `${appUrl}/uploads/profile-pictures/${uploadedPhotoFile.filename}`;
+      }
+    } else if (
+      userDto.hasOwnProperty('profilePicture') &&
+      (userDto as any).profilePicture === null
+    ) {
+      (updatePayload as any).profilePicture = null;
+    }
+
+    if (userDto.phoneNumber !== undefined) {
+      updatePayload.phone =
+        userDto.phoneNumber === null ? undefined : userDto.phoneNumber;
+    }
+
+    (updatePayload as any).photo = null;
+
+    try {
+      await this.usersService.update(userJwtPayload.id, updatePayload as any);
+    } catch (error) {
+      console.error(
+        'AuthService: usersService.update çağrılırken hata oluştu:',
+        error,
+      );
+      const errorMessage = 'Kullanıcı güncellenirken bir sorun oluştu.';
+      let errorDetails = 'No details';
+      if (error.driverError) {
+        console.error(
+          'AuthService: Veritabanı Sürücü Hatası Detayları:',
+          error.driverError,
+        );
+        errorDetails = error.driverError.detail || error.driverError.message;
+      }
+      throw new HttpException(
+        {
+          message: errorMessage,
+          originalError: error.message,
+          details: errorDetails,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
 
     return this.usersService.findOne(
-      {
-        id: userJwtPayload.id,
-      },
+      { id: userJwtPayload.id },
       {
         relations: [
           'clubMemberships',

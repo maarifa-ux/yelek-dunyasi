@@ -10,9 +10,17 @@ import {
   Patch,
   Delete,
   SerializeOptions,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
 import { AuthService } from './auth.service';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { AuthEmailLoginDto } from './dto/auth-email-login.dto';
 import { AuthForgotPasswordDto } from './dto/auth-forgot-password.dto';
 import { AuthConfirmEmailDto } from './dto/auth-confirm-email.dto';
@@ -23,6 +31,15 @@ import { AuthRegisterLoginDto } from './dto/auth-register-login.dto';
 import { LoginResponseType } from './types/login-response.type';
 import { User } from '../users/entities/user.entity';
 import { NullableType } from '../utils/types/nullable.type';
+
+const profilePictureStorage = diskStorage({
+  destination: './public/uploads/profile-pictures',
+  filename: (req, file, callback) => {
+    const uniqueSuffix = uuidv4();
+    const extension = extname(file.originalname);
+    callback(null, `${uniqueSuffix}${extension}`);
+  },
+});
 
 @ApiTags('Auth')
 @Controller({
@@ -114,12 +131,15 @@ export class AuthController {
   })
   @Patch('me')
   @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('photo', { storage: profilePictureStorage }))
+  @ApiConsumes('multipart/form-data')
   @HttpCode(HttpStatus.OK)
   public update(
     @Request() request,
     @Body() userDto: AuthUpdateDto,
+    @UploadedFile() photo?: Express.Multer.File,
   ): Promise<NullableType<User>> {
-    return this.service.update(request.user, userDto);
+    return this.service.update(request.user, userDto, photo);
   }
 
   @ApiBearerAuth()
