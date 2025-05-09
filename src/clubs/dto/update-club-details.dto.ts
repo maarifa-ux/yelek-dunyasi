@@ -8,7 +8,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ClubFileType } from '../entities/club_file.entity';
 
 export class ClubFileDto {
@@ -44,6 +44,11 @@ export class UpdateClubDetailsDto extends PartialType(CreateClubDto) {
   @ApiProperty({
     description: 'Kulübün resmi olup olmadığını belirtir',
     required: false,
+  })
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
   })
   @IsBoolean()
   @IsOptional()

@@ -40,7 +40,7 @@ import {
   EnrichedClubApplication,
 } from './interfaces/club-application.interface';
 import { UpdateClubDetailsDto } from './dto/update-club-details.dto';
-import { ClubFile, ClubFileType } from './entities/club_file.entity';
+import { ClubFile } from './entities/club_file.entity';
 import { Event } from '../events/entities/event.entity';
 
 export interface ClubEventWithClubName {
