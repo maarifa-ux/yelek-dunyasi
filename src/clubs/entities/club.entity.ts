@@ -17,6 +17,7 @@ import { ClubCity } from './club-city.entity';
 import { Subscription } from '../../subscription/entities/subscription.entity';
 import { ClubNote } from './club-note.entity';
 import { ClubApplication } from './club-application.entity';
+import { ClubFile } from './club_file.entity';
 
 export enum ClubType {
   PUBLIC = 'public',
@@ -72,12 +73,12 @@ export class Club {
   @Column({ default: false })
   isFreeForever: boolean;
 
-  @ManyToOne(() => User, (user) => user.foundedClubs)
-  @JoinColumn()
-  founder: User;
+  @ManyToOne(() => User, (user) => user.foundedClubs, { nullable: true })
+  @JoinColumn({ name: 'founderId' })
+  founder: User | null;
 
-  @Column()
-  founderId: string;
+  @Column({ nullable: true })
+  founderId: string | null;
 
   @OneToMany(() => ClubMember, (member) => member.club)
   members: ClubMember[];
@@ -102,6 +103,9 @@ export class Club {
 
   @OneToMany(() => ClubApplication, (application) => application.club)
   applications: ClubApplication[];
+
+  @OneToMany(() => ClubFile, (clubFile) => clubFile.club, { cascade: true })
+  clubFiles: ClubFile[];
 
   @CreateDateColumn()
   createdAt: Date;

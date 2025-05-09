@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Club, ClubStatus, ClubType } from './entities/club.entity';
 import {
   ClubMember,
@@ -39,7 +39,9 @@ import {
   ClubApplicationsResponse,
   EnrichedClubApplication,
 } from './interfaces/club-application.interface';
-import { In } from 'typeorm';
+import { UpdateClubDetailsDto } from './dto/update-club-details.dto';
+import { ClubFile, ClubFileType } from './entities/club_file.entity';
+import { Event } from '../events/entities/event.entity';
 
 export interface ClubEventWithClubName {
   id: string;
@@ -124,6 +126,10 @@ export class ClubsService {
     private readonly clubInvitationRepository: Repository<ClubInvitation>,
     @InjectRepository(ClubApplication)
     private readonly clubApplicationRepository: Repository<ClubApplication>,
+    @InjectRepository(ClubFile)
+    private readonly clubFileRepository: Repository<ClubFile>,
+    @InjectRepository(Event)
+    private readonly eventRepository: Repository<Event>,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
   ) {}
@@ -188,28 +194,63 @@ export class ClubsService {
   }
 
   async findOne(id: string): Promise<Club> {
-    const club = await this.clubRepository.findOne({
-      where: { id },
-      relations: [
-        'founder',
-        'founder.role',
-        'founder.status',
-        'members',
-        'members.user',
-        'members.clubCity',
-        'announcements',
-        'announcements.createdBy',
-        'announcements.targetCity',
-        'events',
-        'cities',
-        'applications',
-        'applications.user',
-      ],
-    });
+    const club = await this.clubRepository.findOne({ where: { id } });
 
     if (!club) {
       throw new NotFoundException('Kulüp bulunamadı');
     }
+
+    // Kurucu (Founder) bilgisini çekme
+    if (club.founderId) {
+      try {
+        // UsersService.findOne({ id: string }, relations?: string[]) şeklinde olduğunu varsayalım
+        const founderUser = await this.usersService.findOne(
+          { id: club.founderId } /*, ['role', 'status'] */,
+        );
+        club.founder = founderUser || null; // Club.founder: User | null olmalı
+      } catch (error) {
+        console.warn(`Error fetching founder for club ${id}:`, error);
+        club.founder = null;
+      }
+    } else {
+      club.founder = null;
+    }
+
+    // Üyeler (Members)
+    club.members = await this.clubMemberRepository.find({
+      where: { clubId: id },
+      relations: ['user', 'clubCity'],
+    });
+
+    // Duyurular (Announcements)
+    club.announcements = await this.announcementRepository.find({
+      where: { clubId: id, isActive: true }, // isActive kontrolü örnek
+      relations: ['createdBy', 'targetCity'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Etkinlikler (Events)
+    club.events = await this.eventRepository.find({
+      where: { clubId: id }, // Event entity'sinde clubId veya club ilişkisi olmalı
+    });
+
+    // Şehirler (Cities)
+    club.cities = await this.clubCityRepository.find({
+      where: { clubId: id },
+      relations: ['city'],
+    });
+
+    // Başvurular (Applications)
+    club.applications = await this.clubApplicationRepository.find({
+      where: { clubId: id },
+      relations: ['user'],
+    });
+
+    // Kulüp Dosyaları (ClubFiles)
+    club.clubFiles = await this.clubFileRepository.find({
+      where: { clubId: id },
+      relations: ['uploadedBy'],
+    });
 
     return club;
   }
@@ -1206,5 +1247,70 @@ export class ClubsService {
     }
 
     return query.getMany();
+  }
+
+  async updateClubDetails(
+    clubId: string,
+    dto: UpdateClubDetailsDto,
+    authUser: User,
+    logoFile?: Express.Multer.File,
+    coverFile?: Express.Multer.File,
+    clubFileBlobs?: Express.Multer.File[],
+  ): Promise<Club> {
+    const club = await this.clubRepository.findOne({
+      where: { id: clubId },
+    });
+
+    if (!club) {
+      throw new NotFoundException('Kulüp bulunamadı');
+    }
+
+    await this.checkClubManagementPermission(club.id, authUser.id);
+
+    const { newClubFiles, ...clubUpdateData } = dto;
+    Object.assign(club, clubUpdateData);
+
+    if (logoFile) {
+      club.logo = `/public/uploads/clubs_media/images/${logoFile.filename}`;
+    }
+
+    if (coverFile) {
+      club.cover = `/public/uploads/clubs_media/images/${coverFile.filename}`;
+    }
+
+    await this.clubRepository.save(club);
+
+    if (
+      clubFileBlobs &&
+      newClubFiles &&
+      newClubFiles.length > 0 &&
+      clubFileBlobs.length === newClubFiles.length
+    ) {
+      for (let i = 0; i < clubFileBlobs.length; i++) {
+        const fileBlob = clubFileBlobs[i];
+        const fileData = newClubFiles[i];
+
+        if (fileBlob && fileData) {
+          const newClubFileEntity = this.clubFileRepository.create({
+            clubId: club.id,
+            fileUrl: `/public/uploads/clubs_media/documents/${fileBlob.filename}`,
+            fileName: fileData.fileName || fileBlob.originalname,
+            fileType: fileData.type,
+            uploadedById: authUser.id,
+          });
+          await this.clubFileRepository.save(newClubFileEntity);
+        }
+      }
+    } else if (
+      clubFileBlobs &&
+      newClubFiles &&
+      clubFileBlobs.length !== newClubFiles.length
+    ) {
+      console.warn(
+        'Yüklenen kulüp dosyalarının sayısı (clubFileBlobs) ile sağlanan dosya bilgisi (newClubFiles) sayısı eşleşmiyor. Dosyalar işlenmedi.',
+      );
+    }
+
+    return this.findOne(clubId);
   }
 }

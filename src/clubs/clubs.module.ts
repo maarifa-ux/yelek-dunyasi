@@ -12,6 +12,8 @@ import { ClubApplication } from './entities/club-application.entity';
 import { ClubRoleSetting } from './entities/club-role-setting.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
+import { ClubFile } from './entities/club_file.entity';
+import { Event } from '../events/entities/event.entity';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { UsersModule } from '../users/users.module';
       ClubInvitation,
       ClubApplication,
       ClubRoleSetting,
+      ClubFile,
+      Event,
     ]),
     NotificationsModule,
     UsersModule,

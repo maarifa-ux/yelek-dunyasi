@@ -8,6 +8,8 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,6 +30,13 @@ import { UserClubEventsResult } from './clubs.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { RespondApplicationDto } from './dto/respond-application.dto';
 import { ApplicationStatus } from './entities/club-application.entity';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UpdateClubDetailsDto } from './dto/update-club-details.dto';
+import {
+  clubStorage,
+  documentFileFilter,
+  imageFileFilter,
+} from '../config/multer.config';
 
 @ApiTags('Kulüpler')
 @Controller({
@@ -269,5 +278,55 @@ export class ClubsController {
     @Query('status') status?: ApplicationStatus,
   ) {
     return this.clubsService.getUserApplications(userId, status);
+  }
+
+  @Patch(':id/details')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Kulüp detaylarını ve dosyalarını güncelle' })
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'logoFile', maxCount: 1 },
+        { name: 'coverFile', maxCount: 1 },
+        { name: 'clubFileBlobs', maxCount: 10 },
+      ],
+      {
+        storage: clubStorage,
+        fileFilter: (req, file, cb) => {
+          if (file.fieldname === 'logoFile' || file.fieldname === 'coverFile') {
+            imageFileFilter(req, file, cb);
+          } else if (file.fieldname === 'clubFileBlobs') {
+            documentFileFilter(req, file, cb);
+          } else {
+            cb(null, false);
+          }
+        },
+      },
+    ),
+  )
+  async updateClubDetails(
+    @Param('id') id: string,
+    @Body() updateClubDetailsDto: UpdateClubDetailsDto,
+    @UploadedFiles()
+    files: {
+      logoFile?: Express.Multer.File[];
+      coverFile?: Express.Multer.File[];
+      clubFileBlobs?: Express.Multer.File[];
+    },
+    @AuthUser() user: User,
+  ) {
+    const logoFile = files.logoFile?.[0];
+    const coverFile = files.coverFile?.[0];
+    const clubFileBlobs = files.clubFileBlobs;
+
+    return this.clubsService.updateClubDetails(
+      id,
+      updateClubDetailsDto,
+      user,
+      logoFile,
+      coverFile,
+      clubFileBlobs,
+    );
   }
 }
