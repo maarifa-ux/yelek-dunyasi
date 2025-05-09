@@ -1277,7 +1277,7 @@ export class ClubsService {
     if (coverFile) {
       club.cover = `/public/uploads/clubs_media/images/${coverFile.filename}`;
     }
-
+    club.isOfficial = dto.isOfficial || false;
     await this.clubRepository.save(club);
 
     if (

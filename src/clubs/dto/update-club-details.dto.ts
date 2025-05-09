@@ -2,6 +2,7 @@ import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { CreateClubDto } from './create-club.dto';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
@@ -39,4 +40,12 @@ export class UpdateClubDetailsDto extends PartialType(CreateClubDto) {
   @Type(() => ClubFileDto)
   @IsOptional()
   newClubFiles?: ClubFileDto[];
+
+  @ApiProperty({
+    description: 'Kulübün resmi olup olmadığını belirtir',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isOfficial?: boolean;
 }
