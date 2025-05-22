@@ -50,8 +50,33 @@ export class ClubsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Yeni kulüp oluştur' })
-  create(@Body() createClubDto: CreateClubDto, @AuthUser() user: User) {
-    return this.clubsService.create(createClubDto, user);
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'logoFile', maxCount: 1 },
+        { name: 'coverFile', maxCount: 1 },
+      ],
+      {
+        storage: clubStorage,
+        fileFilter: imageFileFilter,
+      },
+    ),
+  )
+  create(
+    @Body() createClubDto: CreateClubDto,
+    @AuthUser() user: User,
+    @UploadedFiles()
+    files: {
+      logoFile?: Express.Multer.File[];
+      coverFile?: Express.Multer.File[];
+    },
+  ) {
+    return this.clubsService.create(
+      createClubDto,
+      user,
+      files?.logoFile?.[0],
+      files?.coverFile?.[0],
+    );
   }
 
   @Get()

@@ -134,7 +134,12 @@ export class ClubsService {
     private readonly usersService: UsersService,
   ) {}
 
-  async create(createClubDto: CreateClubDto, user: User): Promise<Club> {
+  async create(
+    createClubDto: CreateClubDto,
+    user: User,
+    logoFile?: Express.Multer.File,
+    coverFile?: Express.Multer.File,
+  ): Promise<Club> {
     const existingClub = await this.clubRepository.findOne({
       where: { name: createClubDto.name },
     });
@@ -143,11 +148,25 @@ export class ClubsService {
       throw new BadRequestException('Bu isimde bir kulüp zaten mevcut');
     }
 
-    const club = this.clubRepository.create({
+    const clubData: Partial<Club> = {
       ...createClubDto,
       founder: user,
       founderId: user.id,
-    });
+      isOfficial:
+        createClubDto.isOfficial !== undefined
+          ? createClubDto.isOfficial
+          : false,
+    };
+
+    if (logoFile) {
+      clubData.logo = `/public/uploads/clubs_media/images/${logoFile.filename}`;
+    }
+
+    if (coverFile) {
+      clubData.cover = `/public/uploads/clubs_media/images/${coverFile.filename}`;
+    }
+
+    const club = this.clubRepository.create(clubData);
 
     await this.clubRepository.save(club);
 
